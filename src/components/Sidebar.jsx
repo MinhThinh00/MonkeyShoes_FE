@@ -1,9 +1,21 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation  } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../redux/slices/userSlice';
+import { toast } from'react-hot-toast';
 import { FaHome, FaShoppingBag, FaCube, FaUsers, FaCog, FaSignOutAlt, FaUserShield } from 'react-icons/fa';
 import { FaPercentage } from 'react-icons/fa';
 
 function Sidebar() {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    
+    dispatch(logout());
+    toast.success('Đăng xuất thành công');
+    navigate('/');
+  };
   const getNavLinkClass = ({ isActive }) => {
     return `flex items-center px-4 py-3 text-sm rounded-lg transition-colors ${
       isActive 
@@ -70,7 +82,7 @@ function Sidebar() {
       </nav>
       
       <div className="p-4 border-t border-gray-200">
-        <button className="flex items-center text-sm text-red-600 hover:text-red-800 transition-colors">
+        <button onClick={handleLogout} className="flex items-center text-sm text-red-600 hover:text-red-800 transition-colors">
           <FaSignOutAlt className="h-5 w-5 mr-3" />
           Đăng xuất
         </button>
