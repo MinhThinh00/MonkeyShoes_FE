@@ -1,71 +1,71 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaSearch, FaEdit, FaTrash, FaPlus, FaEye, FaUserShield, FaTimes } from 'react-icons/fa';
+import { fetchStores } from '../helper/productApi'; // Import fetchStores function
+import { useSelector } from 'react-redux';
+import { adminCreateAccount, updateAccount,getStaffAccounts } from '../helper/accountHelper';
+import { toast } from 'react-hot-toast';
 
 const Accounts = () => {
+
+  const currentUser = useSelector((state) => state.user.currentUser);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [roleFilter, setRoleFilter] = useState('all'); // Move this up
   const [showAddForm, setShowAddForm] = useState(false);
   const [newAccount, setNewAccount] = useState({
-    username: '',
+    userName: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'user'
+    role: 'STAFF',
+    storeId: '' 
   });
   const [formError, setFormError] = useState('');
-
-  // Mock data for demonstration
+  const [stores, setStores] = useState([]);
+  const [loadingStores, setLoadingStores] = useState(false);
+  // Update state variables
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  
+  // Update useEffect
   useEffect(() => {
-    const fetchAccounts = async () => {
-      setLoading(true);
+    const fetchData = async () => {
       try {
-        // Mock data
-        const roles = ['Admin', 'Manager', 'Staff', 'User'];
-        const mockAccounts = Array.from({ length: 20 }, (_, i) => ({
-          id: i + 1,
-          username: `user${i + 1}`,
-          email: `user${i + 1}@example.com`,
-          role: roles[Math.floor(Math.random() * roles.length)],
-          createdAt: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).toISOString(),
-          lastLogin: new Date(Date.now() - Math.floor(Math.random() * 1000000000)).toISOString(),
-          status: Math.random() > 0.2 ? 'Active' : 'Inactive'
-        }));
-        
-        setTimeout(() => {
-          setAccounts(mockAccounts);
-          setLoading(false);
-        }, 800);
+        if (currentUser?.token) {
+          const storesData = await fetchStores(currentUser.token);
+          setStores(storesData);
+  
+          // Fix: Subtract 1 from currentPage since API uses 0-based indexing
+          const response = await getStaffAccounts(currentUser.token, currentPage - 1, searchTerm, roleFilter);
+          console.log('API Response:', response); // For debugging
+          setAccounts(response.data.staff);
+          setTotalPages(response.data.totalPages);
+          setTotalItems(response.data.totalItems);
+        }
       } catch (error) {
-        console.error('Error fetching accounts:', error);
+        console.error('Error fetching data:', error);
+      } finally {
         setLoading(false);
       }
     };
-
-    fetchAccounts();
-  }, []);
-
-  // Filter accounts based on search term
-  // Add a new state for role filtering
-  const [roleFilter, setRoleFilter] = useState('all');
+    
+    fetchData();
+  }, [currentUser, currentPage, searchTerm, roleFilter]); // Add dependencies for search and filter
+  
+  // Update pagination sectio
+  //const [roleFilter, setRoleFilter] = useState('all');
   
   // Update the filteredAccounts to include role filtering
   const filteredAccounts = accounts.filter(account => 
-    (account.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (account.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
      account.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
      account.role.toLowerCase().includes(searchTerm.toLowerCase())) &&
     (roleFilter === 'all' || account.role.toLowerCase() === roleFilter.toLowerCase())
   );
-
-  // Pagination
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredAccounts.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredAccounts.length / itemsPerPage);
-
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Format date
@@ -99,74 +99,79 @@ const Accounts = () => {
     setIsEditMode(true);
     setEditingId(account.id);
     setNewAccount({
-      username: account.username,
+      userName: account.userName,
       email: account.email,
       password: '',
       confirmPassword: '',
-      role: account.role.toLowerCase()
+      role: account.roleName,  // Changed from account.role to account.roleName
+      storeId: account.storeId || ''  // Added storeId
     });
     setShowAddForm(true);
   };
   
   // Update handleSubmit function
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setFormError('');
-  
-    if (!newAccount.username || !newAccount.email) {
-      setFormError('Vui lòng điền đầy đủ thông tin');
-      return;
-    }
-  
-    if (!isEditMode && (!newAccount.password || !newAccount.confirmPassword)) {
-      setFormError('Vui lòng điền mật khẩu');
-      return;
-    }
-  
-    if (newAccount.password !== newAccount.confirmPassword) {
-      setFormError('Mật khẩu xác nhận không khớp');
-      return;
-    }
-  
-    if (isEditMode) {
-      // Update existing account
-      const updatedAccounts = accounts.map(account => 
-        account.id === editingId 
-          ? { 
-              ...account, 
-              username: newAccount.username,
-              email: newAccount.email,
-              role: newAccount.role,
-            } 
-          : account
-      );
-      setAccounts(updatedAccounts);
-    } else {
-      // Add new account
-      const newAccountData = {
-        id: accounts.length + 1,
-        username: newAccount.username,
-        email: newAccount.email,
-        role: newAccount.role,
-        createdAt: new Date().toISOString(),
-        lastLogin: null,
-        status: 'Active'
-      };
-      setAccounts([...accounts, newAccountData]);
-    }
+  const handleSubmit = async (e) => {
+      e.preventDefault();
+      setFormError('');
     
-    // Reset form and close
-    setShowAddForm(false);
-    setIsEditMode(false);
-    setEditingId(null);
-    setNewAccount({
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      role: 'user'
-    });
-    setFormError('');
+      try {
+        if (!newAccount.userName || !newAccount.email) {
+          setFormError('Vui lòng điền đầy đủ thông tin');
+          return;
+        }
+      
+        if (!isEditMode && (!newAccount.password || !newAccount.confirmPassword)) {
+          setFormError('Vui lòng điền mật khẩu');
+          return;
+        }
+      
+        if (newAccount.password !== newAccount.confirmPassword) {
+          setFormError('Mật khẩu xác nhận không khớp');
+          return;
+        }
+  
+        if (newAccount.role === 'STAFF' && !newAccount.storeId) {
+          setFormError('Vui lòng chọn cửa hàng cho nhân viên');
+          return;
+        }
+      
+      const accountData = {
+        userName: newAccount.userName,
+        email: newAccount.email,
+        password: newAccount.password, // Always include password in the data
+        role: newAccount.role,
+        storeId: newAccount.storeId || null
+      };
+  
+      if (!isEditMode) {
+        accountData.password = newAccount.password;
+      }
+    
+      if (isEditMode) {
+        await updateAccount(editingId, accountData, currentUser.token);
+        toast.success('Cập nhật tài khoản thành công!');
+      } else {
+        await adminCreateAccount(accountData, currentUser.token);
+        toast.success('Tạo tài khoản mới thành công!');
+      }
+      
+      // Reset form and close
+      setShowAddForm(false);
+      setIsEditMode(false);
+      setEditingId(null);
+      setNewAccount({
+        userName: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        role: 'STAFF',
+        storeId: ''
+      });
+      setFormError('');
+    } catch (error) {
+      toast.error(error.message || 'Có lỗi xảy ra khi xử lý yêu cầu');
+      setFormError(error.message || 'Có lỗi xảy ra khi xử lý yêu cầu');
+    }
   };
   
   return (
@@ -190,11 +195,11 @@ const Accounts = () => {
                 onClick={() => {
                   setShowAddForm(false);
                   setNewAccount({
-                    username: '',
+                    userName: '',
                     email: '',
                     password: '',
                     confirmPassword: '',
-                    role: 'user'
+                    role: 'STAFF'
                   });
                   setFormError('');
                 }}
@@ -228,8 +233,8 @@ const Accounts = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tên đăng nhập</label>
                   <input
                     type="text"
-                    name="username"
-                    value={newAccount.username}
+                    name="userName"
+                    value={newAccount.userName}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="Nhập tên đăng nhập"
@@ -267,10 +272,17 @@ const Accounts = () => {
                     name="confirmPassword"
                     value={newAccount.confirmPassword}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      newAccount.confirmPassword && newAccount.password !== newAccount.confirmPassword
+                        ? 'border-red-500'
+                        : 'border-gray-300'
+                    }`}
                     placeholder="Nhập lại mật khẩu"
                     required={!isEditMode}
                   />
+                  {newAccount.confirmPassword && newAccount.password !== newAccount.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600">Mật khẩu không khớp</p>
+                  )}
                 </div>
                 <div className="flex flex-col">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Quyền</label>
@@ -280,10 +292,27 @@ const Accounts = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   >
-                    <option value="user">User</option>
                     <option value="staff">Staff</option>
-                    <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
+                  </select>
+                </div>
+                
+                {/* Add Store Selection */}
+                <div className="flex flex-col">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cửa hàng</label>
+                  <select
+                    name="storeId"
+                    value={newAccount.storeId}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    required={newAccount.role === 'STAFF'}
+                  >
+                    <option value="">Chọn cửa hàng</option>
+                    {stores.map((store) => (
+                      <option key={store.id} value={store.id}>
+                        {store.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -296,11 +325,11 @@ const Accounts = () => {
                     setIsEditMode(false);
                     setEditingId(null);
                     setNewAccount({
-                      username: '',
+                      userName: '',
                       email: '',
                       password: '',
                       confirmPassword: '',
-                      role: 'user'
+                      role: 'STAFF'
                     });
                     setFormError('');
                   }}
@@ -370,67 +399,72 @@ const Accounts = () => {
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {currentItems.length > 0 ? (
-                    currentItems.map((account) => (
-                      <tr key={account.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{account.id}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{account.username}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{account.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                            ${account.role === 'Admin' ? 'bg-purple-100 text-purple-800' : 
-                              account.role === 'Manager' ? 'bg-blue-100 text-blue-800' : 
-                              account.role === 'Staff' ? 'bg-green-100 text-green-800' : 
-                              'bg-gray-100 text-gray-800'}`}>
-                            {account.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(account.createdAt)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                            ${account.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                            {account.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end space-x-2">
-                            {/* Remove the eye/view button and keep only edit and delete */}
-                            <button 
-                              onClick={() => handleEdit(account)} 
-                              className="text-yellow-600 hover:text-yellow-900"
-                            >
-                              <FaEdit className="h-5 w-5" />
-                            </button>
-                            <button className="text-red-600 hover:text-red-900">
-                              <FaTrash className="h-5 w-5" />
-                            </button>
-                          </div>
+               
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {accounts.length > 0 ? (
+                      accounts.map((account) => (
+                        <tr key={account.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{account.id}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{account.userName}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{account.email}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                              ${account.roleName === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 
+                                // account.role === 'Manager' ? 'bg-blue-100 text-blue-800' : 
+                                account.roleName === 'STAFF' ? 'bg-green-100 text-green-800' : 
+                                'bg-gray-100 text-gray-800'}`}>
+                              {account.roleName}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(account.createAt)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                              ${account.isActive? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                              {account.isActive? 'Hoạt động' : 'Khóa'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end space-x-2">
+                              {/* Remove the eye/view button and keep only edit and delete */}
+                              {currentUser.userId != account.id &&(
+                                <>
+                                <button 
+                                onClick={() => handleEdit(account)} 
+                                className="text-yellow-600 hover:text-yellow-900"
+                              >
+                                <FaEdit className="h-5 w-5" />
+                              </button>
+                              <button className="text-red-600 hover:text-red-900">
+                                <FaTrash className="h-5 w-5" />
+                              </button>
+                              </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                          Không tìm thấy tài khoản nào
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
-                        Không tìm thấy tài khoản nào
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
+                    )}
+                  </tbody>
               </table>
             </div>
 
             {/* Pagination */}
-            {filteredAccounts.length > itemsPerPage && (
+            {totalPages > 1 && (
               <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200">
                 <div className="text-sm text-gray-500">
-                  Hiển thị {indexOfFirstItem + 1} đến {Math.min(indexOfLastItem, filteredAccounts.length)} trong số {filteredAccounts.length} tài khoản
+                  Hiển thị {accounts.length} trong số {totalItems} tài khoản
                 </div>
                 <div className="flex space-x-1">
                   <button
-                    onClick={() => paginate(currentPage > 1 ? currentPage - 1 : 1)}
+                    onClick={() => setCurrentPage(currentPage > 1 ? currentPage - 1 : 1)}
                     disabled={currentPage === 1}
                     className={`px-3 py-1 rounded ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
                   >
@@ -439,14 +473,14 @@ const Accounts = () => {
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
                     <button
                       key={number}
-                      onClick={() => paginate(number)}
+                      onClick={() => setCurrentPage(number)}
                       className={`px-3 py-1 rounded ${currentPage === number ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
                     >
                       {number}
                     </button>
                   ))}
                   <button
-                    onClick={() => paginate(currentPage < totalPages ? currentPage + 1 : totalPages)}
+                    onClick={() => setCurrentPage(currentPage < totalPages ? currentPage + 1 : totalPages)}
                     disabled={currentPage === totalPages}
                     className={`px-3 py-1 rounded ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
                   >

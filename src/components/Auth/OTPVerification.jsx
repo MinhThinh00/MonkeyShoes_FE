@@ -53,8 +53,8 @@ const OTPVerification = () => {
           otp: parseInt(otp, 10)
         }),
       });
-
-      const data = await response.json();
+      //console.log(response);
+      //const data = await response.data();
 
       if (!response.ok) {
         throw new Error(data.message || 'Xác thực OTP thất bại');

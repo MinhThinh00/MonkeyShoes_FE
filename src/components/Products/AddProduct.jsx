@@ -4,6 +4,7 @@ import { FaTrash, FaPlus, FaSpinner, FaTimes } from 'react-icons/fa';
 import Select from 'react-select';
 import { useSelector } from 'react-redux';
 import uploadImage from '../../helper/uploadImage';
+import { toast } from 'react-hot-toast';
 import { fetchCategories, fetchStores,createProductApi } from '../../helper/productApi';
 
 
