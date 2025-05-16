@@ -35,7 +35,7 @@ const Login = () => {
     dispatch(loginStart()); // Changed from setLoading to loginStart
 
     try {
-      const response = await fetch('http://localhost:8080/auth/login', {
+      const response = await fetch('http://localhost:8169/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ const Login = () => {
 
   // Google Login handler
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+    window.location.href = 'http://localhost:8169/oauth2/authorization/google';
   };
 
   // Structure copied from Signup.jsx, adapted for Login

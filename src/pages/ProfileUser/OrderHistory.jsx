@@ -57,6 +57,12 @@ const OrderHistory = () => {
         }
     }, [currentUser]);
 
+    const handleOrderStatusChange = (orderId, newStatus) => {
+        setOrders(orders.map(order => 
+            order.id === orderId ? {...order, status: newStatus} : order
+        ));
+    };
+
     return (
         <div className="order-history-container" style={{ padding: '20px' }}>
             <h2 className="order-history-title" style={{ fontSize: '24px', marginBottom: '20px' }}>
@@ -104,7 +110,11 @@ const OrderHistory = () => {
             ) : (
                 <div className="orders-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {orders.map(order => (
-                        <OrderCart key={order.id} order={order} />
+                        <OrderCart 
+                            key={order.id} 
+                            order={order} 
+                            onOrderStatusChange={handleOrderStatusChange}
+                        />
                     ))}
                 </div>
             )}

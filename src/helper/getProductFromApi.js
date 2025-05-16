@@ -33,3 +33,6 @@ export const getProductByType = async (type) => {
     throw error;
   } 
 }
+export const getProductFilter = async (filter) => {
+  
+}

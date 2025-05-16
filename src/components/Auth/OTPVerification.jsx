@@ -43,7 +43,7 @@ const OTPVerification = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8080/auth/verify', {
+      const response = await fetch('http://localhost:8169/auth/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ const OTPVerification = () => {
     setError('');
     
     try {
-      const response = await fetch('http://localhost:8080/auth/resend-otp', {
+      const response = await fetch('http://localhost:8169/auth/resend-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -19,7 +19,7 @@ const PaymentCallback = () => {
         const currentUrl = window.location.href;
         
         // Call the payment-callback API with the URL parameters
-        const response = await fetch(`http://localhost:8080/api/payment/payment-callback${location.search}`);
+        const response = await fetch(`http://localhost:8169/api/payment/payment-callback${location.search}`);
         const result = await response.json();
         
         setPaymentStatus(result.success);

@@ -131,25 +131,34 @@ const API_BASE = import.meta.env.VITE_API_URI;
       toast.error('Vui lòng điền đầy đủ thông tin giao hàng');
       return;
     }
-    
+
     try {
+      // Tìm tên tỉnh/thành phố, quận/huyện, phường/xã từ mã code
+      const selectedProvince = provinces.find(p => p.code === parseInt(formData.province))?.name || '';
+      const selectedDistrict = districts.find(d => d.code === parseInt(formData.district))?.name || '';
+      const selectedWard = wards.find(w => w.code === parseInt(formData.ward))?.name || '';
+
+      // Tạo địa chỉ đầy đủ
+      const fullAddress = `${formData.address}, ${selectedWard}, ${selectedDistrict}, ${selectedProvince}`;
+
       // Make sure all cart items have the required price field
       const itemsWithPrice = cartItems.map(item => ({
         ...item,
-        price: item.price || item.unitPrice, // Ensure price field exists
+        price: item.price || item.unitPrice,
         quantity: item.quantity || 1,
         productId: item.productId,
         variantId: item.id
       }));
       
-      // Create order data
+      // Create order data với địa chỉ đầy đủ
       const orderData = {
         ...formData,
+        address: fullAddress, // Sử dụng địa chỉ đầy đủ
         storeId: 1,
         items: itemsWithPrice,
         totalAmount: totalPrice,
         paymentMethod: formData.paymentMethod,
-        isFromCart: formData.fromCart // Include the fromCart flag
+        isFromCart: formData.fromCart
       };
       
       console.log('Order data:', orderData);

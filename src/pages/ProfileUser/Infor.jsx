@@ -7,7 +7,7 @@ import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaSave, FaKey, FaUpload } 
 const Infor = () => {
   const currentUser = useSelector(state => state.user.currentUser);
   const dispatch = useDispatch();
-  const API_BASE = import.meta.env.VITE_API_URI || 'http://localhost:8080';
+  const API_BASE = import.meta.env.VITE_API_URI || 'http://localhost:8169';
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

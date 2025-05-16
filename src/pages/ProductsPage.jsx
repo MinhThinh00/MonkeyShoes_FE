@@ -8,11 +8,15 @@ import { fetchCategories, fetchStores, fetchProductsByStore } from '../helper/pr
 import { useSelector } from 'react-redux';
 
 function ProductsPage() {
+  
   const [categories, setCategories] = useState([]);
   const [stores, setStores] = useState([]);
   const [selectedStore, setSelectedStore] = useState(1);
   const [products, setProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searchTimeout, setSearchTimeout] = useState(null);
   // Add pagination state
   const [pagination, setPagination] = useState({
     currentPage: 0,
@@ -22,8 +26,6 @@ function ProductsPage() {
   const currentUser = useSelector((state) => state.user.currentUser);
   
   const navigate = useNavigate();
-  
-  // Fetch stores and products on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -33,7 +35,7 @@ function ProductsPage() {
           setStores(storesData);
           
           // Fetch products for the default store (ID: 1)
-          fetchProductsByStore(selectedStore);
+          fetchProductsForStore(selectedStore);
           
           // Fetch categories
           const categoriesData = await fetchCategories();
@@ -46,16 +48,29 @@ function ProductsPage() {
     
     fetchData();
   }, [currentUser]);
-  
-  // Function to fetch products by store ID
+  const [isPageTransitioning, setIsPageTransitioning] = useState(false);
+
   const fetchProductsForStore = async (storeId, page = 0) => {
-    setLoading(true);
+    // Chỉ set loading khi không phải là chuyển trang hoặc khi chưa có sản phẩm
+    if (!isPageTransitioning && products.length === 0) {
+      setLoading(true);
+    }
+    
     try {
-      const response = await fetchProductsByStore(storeId, page);
+      const response = await axios.get(`http://localhost:8169/api/products/store/${storeId}/search`, {
+        params: {
+          page: page,
+          search: searchTerm,
+          type: selectedCategory || "", 
+        },
+        headers: {
+          'Authorization': `Bearer ${currentUser?.token}`
+        }
+      });
+      
       console.log('Products data:', response.data);
       const productsData = response?.data.data.products || [];
       setProducts(productsData);
-      // Update pagination state
       setPagination({
         currentPage: response.data.data.currentPage,
         totalPages: response.data.data.totalPages,
@@ -68,53 +83,55 @@ function ProductsPage() {
       return null;
     } finally {
       setLoading(false);
+      setIsPageTransitioning(false);
     }
   };
 
-  // Add pagination handlers
+  // Cập nhật các hàm xử lý phân trang
   const handlePrevPage = () => {
     if (pagination.currentPage > 0) {
+      setIsPageTransitioning(true);
       fetchProductsForStore(selectedStore, pagination.currentPage - 1);
     }
   };
 
   const handleNextPage = () => {
     if (pagination.currentPage < pagination.totalPages - 1) {
+      setIsPageTransitioning(true);
       fetchProductsForStore(selectedStore, pagination.currentPage + 1);
     }
   };
   
-  // Update the useEffect to use this function
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (currentUser?.token) {
-          const storesData = await fetchStores(currentUser.token);
-          setStores(storesData);
-          
-          fetchProductsForStore(selectedStore);
-          const categoriesData = await fetchCategories();
-          setCategories(categoriesData);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    };
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+  
+  const handleCategoryChange = (e) => {
+    setSelectedCategory(e.target.value);
     
-    fetchData();
-  }, [currentUser]);
+  };
   
   // Update the handleStoreChange function
   const handleStoreChange = (e) => {
     const storeId = e.target.value;
     setSelectedStore(storeId);
-    fetchProductsForStore(storeId);
+    //fetchProductsForStore(storeId);
   };
-  
+  useEffect(() => {
+
+    const timer = setTimeout(() => {
+      fetchProductsForStore(selectedStore, 0);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedCategory]);
+
+
   const handleAddProductClick = () => {
     navigate('/dashboard/products/add');
   };
-
+  
   return (
     <div>
       <div className="mb-6 flex justify-between items-center">
@@ -203,16 +220,27 @@ function ProductsPage() {
               <span className="absolute inset-y-0 left-0 flex items-center pl-3">
                 <FaSearch className="h-5 w-5 text-gray-400" />
               </span>
-              <input type="text" placeholder="Tìm sản phẩm..." className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              <input 
+                type="text" 
+                placeholder="Tìm sản phẩm..." 
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
             </div>
-            <select className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option>Tất cả danh mục</option>
+            <select 
+              className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={selectedCategory}
+              onChange={handleCategoryChange}
+            >
+              <option value="">Tất cả danh mục</option>
               {categories.map(category => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
+                <option key={category.id} value={category.name}>
+                 {category.name.charAt(0).toUpperCase() + category.name.slice(1)}
                 </option>
               ))}
             </select>
+            {/* Có thể giữ lại hoặc xóa nút tìm kiếm vì đã có tự động tìm kiếm */}
           </div>
         </div>
         

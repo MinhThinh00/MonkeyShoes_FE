@@ -64,7 +64,7 @@ function App() {
           <Route path="products/edit/:productId" element={<EditProduct />} />
         </Route>
         <Route path="/product/:id" element={<ProductDetail />} />
-        <Route path='/checkout' element={<Checkout />} />\
+        <Route path='/checkout' element={<Checkout />} />
         <Route path="/profile" element={<ProfileLayout />}>
           <Route index element={<OrderHistory />} />
           <Route path="information" element={<Infor />} />

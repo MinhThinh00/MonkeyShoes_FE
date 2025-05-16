@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { FaSearch, FaEye } from 'react-icons/fa';
+import { updateOrderStatus } from '../../helper/orderHelper';
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState([]);
@@ -61,6 +62,10 @@ const OrderHistory = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
+  
+
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   if (loading) {
     return (
@@ -139,17 +144,112 @@ const OrderHistory = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <Link 
-                      to={`/order/${order.id}`} 
-                      className="text-blue-600 hover:text-blue-800 flex items-center"
-                    >
-                      <FaEye className="mr-1" /> Xem chi tiết
-                    </Link>
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        onClick={() => handleViewDetails(order)}
+                        className="text-blue-600 hover:text-blue-800 flex items-center"
+                      >
+                        <FaEye className="mr-1" /> Xem chi tiết
+                      </button>
+                      {order.status === 'PENDING' && (
+                        <button 
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setShowCancelDialog(true);
+                          }}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          Hủy đơn
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Chi tiết đơn hàng Dialog */}
+      {selectedOrder && !showCancelDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Chi tiết đơn hàng #{selectedOrder.id}</h2>
+              <button onClick={() => setSelectedOrder(null)} className="text-gray-500 hover:text-gray-700">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Ngày đặt hàng</p>
+                  <p className="font-medium">{new Date(selectedOrder.createdAt).toLocaleDateString('vi-VN')}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Trạng thái</p>
+                  <p className={`inline-block px-2 py-1 rounded-full text-sm ${getStatusColor(selectedOrder.status)}`}>
+                    {selectedOrder.status === 'PENDING' ? 'Chờ xác nhận' :
+                     selectedOrder.status === 'PROCESSING' ? 'Đang xử lý' :
+                     selectedOrder.status === 'SHIPPED' ? 'Đang giao hàng' :
+                     selectedOrder.status === 'DELIVERED' ? 'Đã giao hàng' :
+                     selectedOrder.status === 'CANCELLED' ? 'Đã hủy' : selectedOrder.status}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2">Sản phẩm</h3>
+                <div className="space-y-2">
+                  {selectedOrder.items?.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between border-b pb-2">
+                      <div className="flex items-center">
+                        <img src={item.variant.img} alt={item.variant.name} className="w-16 h-16 object-cover rounded" />
+                        <div className="ml-4">
+                          <p className="font-medium">{item.variant.productName}</p>
+                          <p className="text-sm text-gray-600">{item.variant.name}</p>
+                          <p className="text-sm">x{item.quantity}</p>
+                        </div>
+                      </div>
+                      <p className="font-medium">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.totalPrice)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <div className="flex justify-between">
+                  <p className="font-semibold">Tổng tiền</p>
+                  <p className="font-semibold">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedOrder.totalAmount)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Xác nhận hủy đơn Dialog */}
+      {showCancelDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Xác nhận hủy đơn</h2>
+            <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn hủy đơn hàng #{selectedOrder.id}?</p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={handleCloseCancelDialog}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Không
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Hủy đơn
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
