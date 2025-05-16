@@ -137,28 +137,30 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
           <div className="md:col-span-2">
             <div className="mb-4 flex justify-between items-center">
               <h3 className="font-semibold text-gray-800">Thông tin đơn hàng</h3>
-              <div className="flex items-center space-x-2">
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
-                  className="border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={updating}
-                >
-                  <option value="PENDING">Chờ Xác Nhận</option>
-                  <option value="PROCESSING">Đang Xử Lý</option>
-                  <option value="SHIPPED">Chờ Giao Hàng</option>
-                  <option value="COMPLETED">Hoàn Thành</option>
-                  <option value="CANCELLED">Hủy Đơn Hàng</option>
-                </select>
-                <button 
-                  onClick={handleStatusChange}
-                  className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 flex items-center"
-                  disabled={updating || newStatus === order.status}
-                >
-                  <FaSave className="h-4 w-4 mr-1" />
-                  Lưu
-                </button>
-              </div>
+              {order.status !== 'COMPLETED' && (
+                <div className="flex items-center space-x-2">
+                  <select
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={updating}
+                  >
+                    <option value="PENDING">Chờ Xác Nhận</option>
+                    <option value="PROCESSING">Đang Xử Lý</option>
+                    <option value="SHIPPED">Chờ Giao Hàng</option>
+                    <option value="COMPLETED">Hoàn Thành</option>
+                    <option value="CANCELLED">Hủy Đơn Hàng</option>
+                  </select>
+                  <button 
+                    onClick={handleStatusChange}
+                    className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 flex items-center"
+                    disabled={updating || newStatus === order.status}
+                  >
+                    <FaSave className="h-4 w-4 mr-1" />
+                    Lưu
+                  </button>
+                </div>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-4 mb-4">
