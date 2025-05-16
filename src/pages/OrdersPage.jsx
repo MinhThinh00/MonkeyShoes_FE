@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from'react-router-dom';
 import { fetchStores } from'../helper/productApi'; 
-import { getOrderByStoreId } from'../helper/orderHelper';
+import { getOrderByFilter, getOrderByStoreId } from'../helper/orderHelper';
 import { FaPlus, FaSearch, FaShoppingBag, FaClock, FaCheckCircle, FaTruck } from 'react-icons/fa'; // Added more icons
 import OrderDetailDialog from '../components/OrderDetailDialog';
 
@@ -27,6 +27,14 @@ function OrdersPage() {
     shipped: 0
   });
   
+  // Add these state variables for date filtering
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]); // Today's date
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  
+  // Add a flag to track if filters have been applied
+  const [filtersApplied, setFiltersApplied] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -34,8 +42,8 @@ function OrdersPage() {
           const storesData = await fetchStores(currentUser.token);
           setStores(storesData);
           
-          // Use the fetchOrdersForStore function
-          await fetchOrdersForStore(selectedStore);
+          // Use the initial fetch function without filters
+          await fetchInitialOrders(selectedStore);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -45,10 +53,14 @@ function OrdersPage() {
     fetchData();
   }, [currentUser]);
 
-  const fetchOrdersForStore = async (storeId, page = 0) => {
+  // Initial fetch without filters
+  const fetchInitialOrders = async (storeId, page = 0) => {
     try {
       if (currentUser?.token) {
+        console.log(`Initial fetch - Store: ${storeId}, Page: ${page}`);
+        
         const response = await getOrderByStoreId(storeId, currentUser.token, page);
+        
         if (response && response.data && response.data.data) {
           setOrders(response.data.data.orders || []);
           setPagination({
@@ -59,19 +71,97 @@ function OrdersPage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('Error fetching initial orders:', error);
     }
   };
 
+  // Add useEffect for debounced filtering - only when filters change
+  useEffect(() => {
+    // Skip the first render
+    if (!filtersApplied) {
+      setFiltersApplied(true);
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      fetchOrdersWithFilters(selectedStore, 0);
+    }, 500); // 500ms debounce
+  
+    return () => clearTimeout(timer);
+  }, [startDate, endDate, statusFilter]);
+  
+  // Separate effect for store changes
+  useEffect(() => {
+    // Skip the first render
+    if (!filtersApplied) {
+      return;
+    }
+    
+    // If filters have been applied, use filtered fetch
+    if (startDate || endDate !== new Date().toISOString().split('T')[0] || statusFilter !== 'ALL') {
+      fetchOrdersWithFilters(selectedStore, 0);
+    } else {
+      // Otherwise use initial fetch
+      fetchInitialOrders(selectedStore, 0);
+    }
+  }, [selectedStore]);
+  
+  // Fetch with filters
+  const fetchOrdersWithFilters = async (storeId, page = 0) => {
+    try {
+      if (currentUser?.token) {
+        console.log(`Filtered fetch - Store: ${storeId}, Page: ${page}, StartDate: ${startDate}, EndDate: ${endDate}, Status: ${statusFilter !== 'ALL' ? statusFilter : ''}`);
+        
+        const response = await getOrderByFilter(
+          storeId, 
+          currentUser.token, 
+          page,
+          startDate,
+          endDate,
+          statusFilter !== 'ALL' ? statusFilter : ''
+        );
+        
+        if (response && response.data && response.data.data) {
+          setOrders(response.data.data.orders || []);
+          setPagination({
+            currentPage: response.data.data.currentPage,
+            totalPages: response.data.data.totalPages,
+            totalItems: response.data.data.totalItems
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching filtered orders:', error);
+    }
+  };
+
+  // Handler for status filter
+  const handleStatusFilterChange = (e) => {
+    setStatusFilter(e.target.value);
+  };
+
+  // Update handleStoreChange
   const handleStoreChange = (e) => {
     const storeId = e.target.value;
     setSelectedStore(storeId);
-    fetchOrdersForStore(storeId);
+    
+    // Use appropriate fetch based on filter state
+    if (startDate || endDate !== new Date().toISOString().split('T')[0] || statusFilter !== 'ALL') {
+      fetchOrdersWithFilters(storeId, 0);
+    } else {
+      fetchInitialOrders(storeId, 0);
+    }
   };
 
+  // Update handlePageChange
   const handlePageChange = (newPage) => {
     if (newPage >= 0 && newPage < pagination.totalPages) {
-      fetchOrdersForStore(selectedStore, newPage);
+      // Use appropriate fetch based on filter state
+      if (startDate || endDate !== new Date().toISOString().split('T')[0] || statusFilter !== 'ALL') {
+        fetchOrdersWithFilters(selectedStore, newPage);
+      } else {
+        fetchInitialOrders(selectedStore, newPage);
+      }
     }
   };
 
@@ -178,7 +268,7 @@ function OrdersPage() {
         <div className="p-6 border-b border-gray-100 flex justify-between items-center">
           <h3 className="font-semibold text-gray-800">Danh sách đơn hàng</h3>
           <div className="flex space-x-2">
-          <select 
+            <select 
               value={selectedStore}
               onChange={handleStoreChange}
               className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -189,20 +279,33 @@ function OrdersPage() {
                 </option>
               ))}
             </select>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                {/* Replace SVG with FaSearch */}
-                <FaSearch className="h-5 w-5 text-gray-400" />
-              </span>
-              <input type="text" placeholder="Tìm đơn hàng..." className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-            </div>
-            <select className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option>Tất cả trạng thái</option>
-              <option>Chờ Xác Nhận</option>
-              <option>Đã Giao Hàng Cho Shipper</option>
-              <option>Đã thanh toán</option>
-              <option>Hoàn Thành</option>
-              <option>Đã hủy</option>
+            
+            {/* Date filters with auto-update */}
+            <input 
+              type="date" 
+              value={startDate} 
+              onChange={(e) => setStartDate(e.target.value)}
+              className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <span className="flex items-center text-gray-500">đến</span>
+            <input 
+              type="date" 
+              value={endDate} 
+              onChange={(e) => setEndDate(e.target.value)}
+              className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            
+            <select 
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
+              className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="PENDING">Chờ Xác Nhận</option>
+              <option value="PROCESSING">Đang Xử Lý</option>
+              <option value="SHIPPED">Đã Giao Hàng Cho Shipper</option>
+              <option value="COMPLETED">Hoàn Thành</option>
+              <option value="CANCELLED">Đã hủy</option>
             </select>
           </div>
         </div>
