@@ -4,6 +4,7 @@ import { FaEye, FaEyeSlash, FaSpinner, FaGoogle } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 
 const Signup = () => {
+  const authURL = import.meta.env.VITE_API_AUTH;
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -38,7 +39,7 @@ const Signup = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8169/auth/register', {
+      const response = await fetch(`${authURL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

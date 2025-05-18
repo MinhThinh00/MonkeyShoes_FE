@@ -19,7 +19,7 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
           console.log('Order details:', response);
           if (response && response.data.data) {
             setOrder(response.data.data);
-            setNewStatus(response.data.status);
+            setNewStatus(response.data.data.status);
           }
         }
       } catch (error) {

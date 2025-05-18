@@ -211,10 +211,10 @@ function OrdersPage() {
           <h1 className="text-2xl font-bold text-gray-800">Quản lý Đơn hàng</h1>
           <p className="text-gray-600 mt-1">Quản lý và theo dõi tất cả đơn hàng</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors">
+        {/* <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors">
           <FaPlus className="h-5 w-5 mr-2" />
           Tạo đơn hàng
-        </button>
+        </button> */}
       </div>
       
       {/* Statistics Cards */}

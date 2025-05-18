@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaSearch, FaEdit, FaTrash, FaPlus, FaEye, FaUserShield, FaTimes } from 'react-icons/fa';
 import { fetchStores } from '../helper/productApi'; // Import fetchStores function
 import { useSelector } from 'react-redux';
-import { adminCreateAccount, updateAccount,getStaffAccounts } from '../helper/accountHelper';
+import { adminCreateAccount, updateAccount, getStaffAccounts, deleteAccount } from '../helper/accountHelper';
 import { toast } from 'react-hot-toast';
 
 const Accounts = () => {
@@ -21,8 +21,8 @@ const Accounts = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'STAFF',
-    storeId: '' 
+    roleName: 'STAFF',
+    storeId: ''
   });
   const [formError, setFormError] = useState('');
   const [stores, setStores] = useState([]);
@@ -30,50 +30,147 @@ const Accounts = () => {
   // Update state variables
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  
-  // Update useEffect
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (currentUser?.token) {
-          const storesData = await fetchStores(currentUser.token);
-          setStores(storesData);
-  
+        if (!currentUser?.token) {
+          console.error('User not authenticated');
+          return;
+        }
+
+        // Load stores data regardless of search
+        const storesData = await fetchStores(currentUser.token);
+        setStores(storesData);
+
+        // Only fetch accounts if not searching - use the staff API endpoint
+        if (!searchTerm && (roleFilter === 'all' || !roleFilter)) {
+          setLoading(true);
           // Fix: Subtract 1 from currentPage since API uses 0-based indexing
-          const response = await getStaffAccounts(currentUser.token, currentPage - 1, searchTerm, roleFilter);
-          console.log('API Response:', response); // For debugging
+          const response = await getStaffAccounts(currentUser.token, currentPage - 1);
           setAccounts(response.data.staff);
           setTotalPages(response.data.totalPages);
           setTotalItems(response.data.totalItems);
+          setLoading(false);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [currentUser, currentPage]);
+
+  // Separate useEffect for search and filter functionality
+  useEffect(() => {
+    // Modified condition to ensure search runs when role filter changes
+    // We need to track if the filter was just changed to 'all'
+    const isSearching = searchTerm || roleFilter !== 'all';
+
+    // If nothing to search for and we're not explicitly filtering, don't search
+    if (!isSearching) {
+      // When switching back to 'all', we should reload the default data
+      if (roleFilter === 'all') {
+        const fetchDefaultData = async () => {
+          try {
+            if (!currentUser?.token) return;
+            setLoading(true);
+            const response = await getStaffAccounts(currentUser.token, 0); // First page
+            setAccounts(response.data.staff);
+            setTotalPages(response.data.totalPages);
+            setTotalItems(response.data.totalItems);
+            setCurrentPage(1);
+          } catch (error) {
+            console.error('Error fetching default data:', error);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        fetchDefaultData();
+      }
+      return;
+    }
+
+    // Rest of the search function remains the same
+    const searchAccounts = async () => {
+      setLoading(true);
+      try {
+        if (!currentUser?.token) {
+          console.error('User not authenticated');
+          setLoading(false);
+          return;
+        }
+
+        // Use the search API endpoint with the correct parameters
+        const baseURL = import.meta.env.VITE_API_URI;
+        let searchUrl = `${baseURL}/users/search?`;
+
+        // Add search parameters if they exist
+        if (searchTerm) {
+          searchUrl += `name=${searchTerm}`;
+        } else {
+          searchUrl += `name=`; // Truyền tham số name rỗng thay vì không truyền
+        }
+
+        // Add role filter if it's not 'all' - don't include role parameter when 'all' is selected
+        if (roleFilter !== 'all') {
+          searchUrl += searchTerm || searchUrl.endsWith('=') ? `&role=${roleFilter}` : `role=${roleFilter}`;
+        }
+
+        const response = await fetch(searchUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentUser.token}`
+          }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          setAccounts(result.data.users || []);
+          setTotalPages(result.data.totalPages || 1);
+          setTotalItems(result.data.totalItems || (result.data.users?.length || 0));
+          // Reset current page to 1 in the UI (1-based)
+          setCurrentPage(1);
+        } else {
+          console.error('Error searching accounts:', result.message);
+        }
+      } catch (error) {
+        console.error('Error searching accounts:', error);
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchData();
-  }, [currentUser, currentPage, searchTerm, roleFilter]); // Add dependencies for search and filter
-  
+
+    const timeoutId = setTimeout(() => {
+      searchAccounts();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, roleFilter, currentUser]);
+
   // Update pagination sectio
   //const [roleFilter, setRoleFilter] = useState('all');
-  
+
   // Update the filteredAccounts to include role filtering
-  const filteredAccounts = accounts.filter(account => 
-    (account.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     account.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     account.role.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (roleFilter === 'all' || account.role.toLowerCase() === roleFilter.toLowerCase())
-  );
+  // Remove this client-side filtering code
+  // const filteredAccounts = accounts.filter(account => 
+  //   (account.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //    account.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //    (account.role?.toLowerCase() || account.roleName?.toLowerCase() || '').includes(searchTerm.toLowerCase())) &&
+  //   (roleFilter === 'all' || (account.role?.toLowerCase() || account.roleName?.toLowerCase() || '') === roleFilter.toLowerCase())
+  // );
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Format date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', { 
-      year: 'numeric', 
-      month: '2-digit', 
+    return date.toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
@@ -93,7 +190,7 @@ const Accounts = () => {
   // Add these state variables at the top with other states
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  
+
   // Add handleEdit function before the return statement
   const handleEdit = (account) => {
     setIsEditMode(true);
@@ -103,50 +200,50 @@ const Accounts = () => {
       email: account.email,
       password: '',
       confirmPassword: '',
-      role: account.roleName,  // Changed from account.role to account.roleName
+      roleName: account.roleName,  // Changed from account.role to account.roleName
       storeId: account.storeId || ''  // Added storeId
     });
     setShowAddForm(true);
   };
-  
+
   // Update handleSubmit function
   const handleSubmit = async (e) => {
-      e.preventDefault();
-      setFormError('');
-    
-      try {
-        if (!newAccount.userName || !newAccount.email) {
-          setFormError('Vui lòng điền đầy đủ thông tin');
-          return;
-        }
-      
-        if (!isEditMode && (!newAccount.password || !newAccount.confirmPassword)) {
-          setFormError('Vui lòng điền mật khẩu');
-          return;
-        }
-      
-        if (newAccount.password !== newAccount.confirmPassword) {
-          setFormError('Mật khẩu xác nhận không khớp');
-          return;
-        }
-  
-        if (newAccount.role === 'STAFF' && !newAccount.storeId) {
-          setFormError('Vui lòng chọn cửa hàng cho nhân viên');
-          return;
-        }
-      
+    e.preventDefault();
+    setFormError('');
+
+    try {
+      if (!newAccount.userName || !newAccount.email) {
+        setFormError('Vui lòng điền đầy đủ thông tin');
+        return;
+      }
+
+      if (!isEditMode && (!newAccount.password || !newAccount.confirmPassword)) {
+        setFormError('Vui lòng điền mật khẩu');
+        return;
+      }
+
+      if (newAccount.password !== newAccount.confirmPassword) {
+        setFormError('Mật khẩu xác nhận không khớp');
+        return;
+      }
+
+      if (newAccount.role === 'STAFF' && !newAccount.storeId) {
+        setFormError('Vui lòng chọn cửa hàng cho nhân viên');
+        return;
+      }
+
       const accountData = {
         userName: newAccount.userName,
         email: newAccount.email,
         password: newAccount.password, // Always include password in the data
-        role: newAccount.role,
+        roleName: newAccount.roleName,
         storeId: newAccount.storeId || null
       };
-  
+
       if (!isEditMode) {
         accountData.password = newAccount.password;
       }
-    
+
       if (isEditMode) {
         await updateAccount(editingId, accountData, currentUser.token);
         toast.success('Cập nhật tài khoản thành công!');
@@ -154,7 +251,7 @@ const Accounts = () => {
         await adminCreateAccount(accountData, currentUser.token);
         toast.success('Tạo tài khoản mới thành công!');
       }
-      
+
       // Reset form and close
       setShowAddForm(false);
       setIsEditMode(false);
@@ -164,7 +261,7 @@ const Accounts = () => {
         email: '',
         password: '',
         confirmPassword: '',
-        role: 'STAFF',
+        roleName: 'STAFF',
         storeId: ''
       });
       setFormError('');
@@ -173,12 +270,35 @@ const Accounts = () => {
       setFormError(error.message || 'Có lỗi xảy ra khi xử lý yêu cầu');
     }
   };
-  
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const handleDeleteClick = (account) => {
+    setSelectedAccount(account);
+    setShowConfirmDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await deleteAccount(selectedAccount.id, currentUser.token);
+      toast.success('Xóa tài khoản thành công!');
+      setShowConfirmDialog(false);
+
+      // Refresh danh sách tài khoản
+      const response = await getStaffAccounts(currentUser.token, currentPage - 1);
+      setAccounts(response.data.staff);
+      setTotalPages(response.data.totalPages);
+      setTotalItems(response.data.totalItems);
+    } catch (error) {
+      console.error('Lỗi khi xóa tài khoản:', error);
+      toast.error(error.message || 'Có lỗi xảy ra khi xóa tài khoản');
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Quản lý tài khoản</h1>
-        <button 
+        <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center"
         >
@@ -199,7 +319,7 @@ const Accounts = () => {
                     email: '',
                     password: '',
                     confirmPassword: '',
-                    role: 'STAFF'
+                    roleName: 'STAFF'
                   });
                   setFormError('');
                 }}
@@ -208,9 +328,9 @@ const Accounts = () => {
                 <FaTimes className="h-6 w-6" />
               </button>
             </div>
-            
+
             {/* Rest of the form remains unchanged */}
-            
+
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">
                 {isEditMode ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản mới'}
@@ -272,11 +392,10 @@ const Accounts = () => {
                     name="confirmPassword"
                     value={newAccount.confirmPassword}
                     onChange={handleInputChange}
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                      newAccount.confirmPassword && newAccount.password !== newAccount.confirmPassword
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${newAccount.confirmPassword && newAccount.password !== newAccount.confirmPassword
                         ? 'border-red-500'
                         : 'border-gray-300'
-                    }`}
+                      }`}
                     placeholder="Nhập lại mật khẩu"
                     required={!isEditMode}
                   />
@@ -288,7 +407,7 @@ const Accounts = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Quyền</label>
                   <select
                     name="role"
-                    value={newAccount.role}
+                    value={newAccount.roleName}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   >
@@ -296,7 +415,7 @@ const Accounts = () => {
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                
+
                 {/* Add Store Selection */}
                 <div className="flex flex-col">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cửa hàng</label>
@@ -329,7 +448,7 @@ const Accounts = () => {
                       email: '',
                       password: '',
                       confirmPassword: '',
-                      role: 'STAFF'
+                      roleName: 'STAFF'
                     });
                     setFormError('');
                   }}
@@ -355,24 +474,30 @@ const Accounts = () => {
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên, email, quyền..."
+              placeholder="Tìm kiếm theo tên, email"
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                // Reset happens in the search useEffect
+              }}
             />
             <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
-          
+
           {/* Role filter dropdown */}
           <div className="w-full md:w-48">
             <select
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
+              onChange={(e) => {
+                setRoleFilter(e.target.value);
+                // Reset happens in the search useEffect
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">Tất cả quyền</option>
-              <option value="admin">Admin</option>
-              <option value="staff">Staff</option>
+              <option value="ADMIN">Admin</option>
+              <option value="STAFF">Staff</option>
             </select>
           </div>
         </div>
@@ -399,62 +524,93 @@ const Accounts = () => {
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                   </tr>
                 </thead>
-               
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {accounts.length > 0 ? (
-                      accounts.map((account) => (
-                        <tr key={account.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{account.id}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{account.userName}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{account.email}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                              ${account.roleName === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 
-                                // account.role === 'Manager' ? 'bg-blue-100 text-blue-800' : 
-                                account.roleName === 'STAFF' ? 'bg-green-100 text-green-800' : 
+
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {accounts.length > 0 ? (
+                    accounts.map((account) => (
+                      <tr key={account.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{account.id}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{account.userName}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{account.email}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                              ${account.roleName === 'ADMIN' ? 'bg-purple-100 text-purple-800' :
+                              // account.role === 'Manager' ? 'bg-blue-100 text-blue-800' : 
+                              account.roleName === 'STAFF' ? 'bg-green-100 text-green-800' :
                                 'bg-gray-100 text-gray-800'}`}>
-                              {account.roleName}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(account.createAt)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                              ${account.isActive? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                              {account.isActive? 'Hoạt động' : 'Khóa'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex justify-end space-x-2">
-                              {/* Remove the eye/view button and keep only edit and delete */}
-                              {currentUser.userId != account.id &&(
-                                <>
-                                <button 
-                                onClick={() => handleEdit(account)} 
-                                className="text-yellow-600 hover:text-yellow-900"
-                              >
-                                <FaEdit className="h-5 w-5" />
-                              </button>
-                              <button className="text-red-600 hover:text-red-900">
-                                <FaTrash className="h-5 w-5" />
-                              </button>
+                            {account.roleName}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(account.createAt)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                              ${account.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {account.isActive ? 'Hoạt động' : 'Khóa'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex justify-end space-x-2">
+                            {/* Remove the eye/view button and keep only edit and delete */}
+                            {currentUser.userId != account.id && (
+                              <>
+                                <button
+                                  onClick={() => handleEdit(account)}
+                                  className="text-yellow-600 hover:text-yellow-900"
+                                >
+                                  <FaEdit className="h-5 w-5" />
+                                </button>
+                                <button onClick={() => handleDeleteClick(account)} className="text-red-600 hover:text-red-900">
+                                  <FaTrash className="h-5 w-5" />
+                                </button>
                               </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
-                          Không tìm thấy tài khoản nào
+                            )}
+                          </div>
                         </td>
                       </tr>
-                    )}
-                  </tbody>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                        Không tìm thấy tài khoản nào
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
               </table>
             </div>
+
+            {/* Confirmation Dialog */}
+            {showConfirmDialog && (
+              <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+                <div className="relative bg-white rounded-lg max-w-md w-full mx-auto p-6 shadow-xl">
+                  <div className="text-center mb-6">
+                    <FaTrash className="mx-auto text-red-500 text-4xl mb-4" />
+                    <h2 className="text-xl font-bold text-gray-800">Xác nhận xóa tài khoản</h2>
+                    <p className="text-gray-600 mt-2">
+                      Bạn có chắc chắn muốn xóa tài khoản <span className="font-semibold">{selectedAccount?.userName}</span>?
+                    </p>
+                    <p className="text-red-500 text-sm mt-2">Hành động này không thể hoàn tác.</p>
+                  </div>
+
+                  <div className="flex justify-center space-x-4">
+                    <button
+                      onClick={() => setShowConfirmDialog(false)}
+                      className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      onClick={confirmDelete}
+                      className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (

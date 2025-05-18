@@ -61,3 +61,4 @@ export const updateAccount = async (accountId, accountData, token) => {
       throw error.response?.data || error.message;
     }
   };
+

@@ -4,6 +4,7 @@ import { FaSpinner } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 
 const OTPVerification = () => {
+  const authURL = import.meta.env.VITE_API_AUTH;
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -43,7 +44,7 @@ const OTPVerification = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8169/auth/verify', {
+      const response = await fetch(`${authURL}/auth/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +79,7 @@ const OTPVerification = () => {
     setError('');
     
     try {
-      const response = await fetch('http://localhost:8169/auth/resend-otp', {
+      const response = await fetch(`${authURL}/auth/resend-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
