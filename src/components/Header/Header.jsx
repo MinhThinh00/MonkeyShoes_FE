@@ -8,6 +8,9 @@ import logo from '../../assets/logo.png';
 import { userGetCart } from '../../helper/cartHelper';
 
 const Header = ({ onSearch }) => {
+  const baseURL = import.meta.env.VITE_API_URI;
+
+  const [userLogin, setUserLogin] = useState();
   const [showDropdown, setShowDropdown] = useState(false);
   const [cartItemCount, setCartItemCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,13 +20,38 @@ const Header = ({ onSearch }) => {
   
   const currentUser = useSelector(state => state.user.currentUser);
   
+  const fetchUser = async () => {
+    try {
+      const response = await fetch(`${baseURL}/users/${currentUser.userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentUser.token}`
+        }
+      });
+      const data = await response.json();
+      
+      console.log('response data', data);
+      setUserLogin(data);
+      // The userLogin state won't be updated immediately after setUserLogin
+      // So we should use the data directly if we need to log it
+      console.log('userLogin from response', data);
+      
+    } catch (error) {
+      throw error;
+    }
+  };
   // Lấy tham số tìm kiếm từ URL khi component được tải
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const searchFromUrl = searchParams.get('search') || '';
     setSearchTerm(searchFromUrl);
   }, [location.search]);
-  
+  useEffect(() => {
+    if (currentUser) {
+      fetchUser();
+    }
+  }, [currentUser]);
   // Fetch cart data when component mounts or user changes
   useEffect(() => {
     const fetchCartData = async () => {
@@ -135,14 +163,13 @@ const Header = ({ onSearch }) => {
                   className="flex items-center text-gray-700 hover:text-blue-600 transition-colors group"
                 >
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
-                    {currentUser.img ? (
-                      <img src={currentUser.img} alt="Avatar" className="w-full h-full object-cover" />
+                    {userLogin && userLogin.img ? (
+                      <img src={userLogin.img} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
                       <FaUserCircle className="h-7 w-7 text-blue-500" />
                     )}
                   </div>
-                  {/* || currentUser.email.split('@')[0] */}
-                  <span className="ml-2 font-medium">{currentUser.name }</span>
+                  <span className="ml-2 font-medium">{userLogin ? userLogin.name : currentUser.name}</span>
                 </button>
                 
                 {showDropdown && (

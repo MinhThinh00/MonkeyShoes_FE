@@ -7,6 +7,8 @@ import { loginStart, loginSuccess, loginFailure } from '../../redux/slices/userS
 import { decodeToken } from '../../utils/tokenUtils';
 
 const Login = () => {
+
+  const authURL = import.meta.env.VITE_API_AUTH;
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -35,7 +37,7 @@ const Login = () => {
     dispatch(loginStart()); // Changed from setLoading to loginStart
 
     try {
-      const response = await fetch('http://localhost:8169/auth/login', {
+      const response = await fetch(`${authURL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +69,7 @@ const Login = () => {
       toast.success('Đăng nhập thành công!');
       
       // Redirect based on role
-      if (user.role === 'ADMIN') {
+      if (user.role === 'ADMIN' || user.role === 'STAFF') {
         navigate('/dashboard');
       } else {
         // Redirect to previous page or home
@@ -86,7 +88,7 @@ const Login = () => {
 
   // Google Login handler
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:8169/oauth2/authorization/google';
+    window.location.href = `${authURL}/oauth2/authorization/google`;
   };
 
   // Structure copied from Signup.jsx, adapted for Login

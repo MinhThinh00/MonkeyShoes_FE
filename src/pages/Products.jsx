@@ -52,7 +52,7 @@ const Products = () => {
   // Hàm để lấy danh sách cửa hàng
   const fetchStores = async () => {
     try {
-      const response = await axios.get('http://localhost:8169/api/store');
+      const response = await axios.get(`${baseURL}/store`);
       setStores(response.data || []);
     } catch (error) {
       console.error('Error fetching stores:', error);
@@ -63,13 +63,13 @@ const Products = () => {
   // Hàm để lấy thông tin chi tiết của cửa hàng
   const fetchStoreDetails = async (id) => {
     try {
-      const response = await axios.get(`http://localhost:8169/api/store/${id}`);
+      const response = await axios.get(`${baseURL}/store/${id}`);
       setCurrentStore(response.data);
     } catch (error) {
       console.error('Error fetching store details:', error);
       // Nếu không lấy được thông tin cửa hàng, tạo thông tin mặc định
-      const defaultStore = stores.find(store => store.id === id) || { id, name: `Cửa hàng ${id}` };
-      setCurrentStore(defaultStore);
+      // const defaultStore = stores.find(store => store.id === id) || { id, name: `Cửa hàng ${id}` };
+      // setCurrentStore(defaultStore);
     }
   };
 
@@ -170,7 +170,7 @@ useEffect(() => {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get('http://localhost:8169/api/categories');
+      const response = await axios.get(`${baseURL}/categories`);
       setCategories(response.data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -231,7 +231,7 @@ useEffect(() => {
       
       try {
         // Sử dụng API tìm kiếm cho tất cả các trường hợp
-        const response = await axios.get(`http://localhost:8169/api/products/store/${currentStoreId}/search`, {
+        const response = await axios.get(`${baseURL}/products/store/${currentStoreId}/search`, {
           params: apiFilters
         });
         
@@ -360,7 +360,7 @@ useEffect(() => {
             <div className="flex items-center">
               <FaStore className="text-blue-600 mr-2" />
               <span className="text-gray-700">
-                Bạn đang xem sản phẩm tại: <span className="font-semibold">{currentStore ? currentStore.name : `Cửa hàng ${storeId}`}</span>
+                Bạn đang xem sản phẩm tại: <span className="font-semibold">{currentStore ? currentStore.name : 'monkey shoseee'}</span>
               </span>
             </div>
             <button 

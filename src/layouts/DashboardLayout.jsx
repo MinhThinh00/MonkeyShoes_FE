@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { FaSearch, FaBell, FaBars } from 'react-icons/fa';
+import { useSelector } from 'react-redux';
+
 
 function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const currentUser = useSelector((state) => state.user.currentUser);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);

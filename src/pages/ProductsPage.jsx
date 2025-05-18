@@ -9,6 +9,8 @@ import { useSelector } from 'react-redux';
 
 function ProductsPage() {
   
+  const baseURL = import.meta.env.VITE_API_URI;
+
   const [categories, setCategories] = useState([]);
   const [stores, setStores] = useState([]);
   const [selectedStore, setSelectedStore] = useState(1);
@@ -57,7 +59,7 @@ function ProductsPage() {
     }
     
     try {
-      const response = await axios.get(`http://localhost:8169/api/products/store/${storeId}/search`, {
+      const response = await axios.get(`${baseURL}/products/store/${storeId}/search`, {
         params: {
           page: page,
           search: searchTerm,
@@ -125,7 +127,7 @@ function ProductsPage() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, selectedCategory]);
+  }, [searchTerm, selectedCategory,selectedStore]);
 
 
   const handleAddProductClick = () => {
@@ -308,7 +310,7 @@ function ProductsPage() {
                       <div className="text-sm text-gray-900">{product.basePrice?.toLocaleString('vi-VN')} đ</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{product.totalQuantity || 0}</div>
+                      <div className="text-sm text-gray-900">{product.variants.reduce((sum, variant) => sum + variant.quantity, 0) || 0}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">

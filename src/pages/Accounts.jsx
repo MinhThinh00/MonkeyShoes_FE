@@ -31,41 +31,136 @@ const Accounts = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   
-  // Update useEffect
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (currentUser?.token) {
-          const storesData = await fetchStores(currentUser.token);
-          setStores(storesData);
-  
+        if (!currentUser?.token) {
+          console.error('User not authenticated');
+          return;
+        }
+        
+        // Load stores data regardless of search
+        const storesData = await fetchStores(currentUser.token);
+        setStores(storesData);
+        
+        // Only fetch accounts if not searching - use the staff API endpoint
+        if (!searchTerm && (roleFilter === 'all' || !roleFilter)) {
+          setLoading(true);
           // Fix: Subtract 1 from currentPage since API uses 0-based indexing
-          const response = await getStaffAccounts(currentUser.token, currentPage - 1, searchTerm, roleFilter);
-          console.log('API Response:', response); // For debugging
+          const response = await getStaffAccounts(currentUser.token, currentPage - 1);
           setAccounts(response.data.staff);
           setTotalPages(response.data.totalPages);
           setTotalItems(response.data.totalItems);
+          setLoading(false);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
-      } finally {
         setLoading(false);
       }
     };
     
     fetchData();
-  }, [currentUser, currentPage, searchTerm, roleFilter]); // Add dependencies for search and filter
+  }, [currentUser, currentPage]);
+  
+  // Separate useEffect for search and filter functionality
+  useEffect(() => {
+    // Modified condition to ensure search runs when role filter changes
+    // We need to track if the filter was just changed to 'all'
+    const isSearching = searchTerm || roleFilter !== 'all';
+    
+    // If nothing to search for and we're not explicitly filtering, don't search
+    if (!isSearching) {
+      // When switching back to 'all', we should reload the default data
+      if (roleFilter === 'all') {
+        const fetchDefaultData = async () => {
+          try {
+            if (!currentUser?.token) return;
+            setLoading(true);
+            const response = await getStaffAccounts(currentUser.token, 0); // First page
+            setAccounts(response.data.staff);
+            setTotalPages(response.data.totalPages);
+            setTotalItems(response.data.totalItems);
+            setCurrentPage(1);
+          } catch (error) {
+            console.error('Error fetching default data:', error);
+          } finally {
+            setLoading(false);
+          }
+        };
+        
+        fetchDefaultData();
+      }
+      return;
+    }
+    
+    // Rest of the search function remains the same
+    const searchAccounts = async () => {
+      setLoading(true);
+      try {
+        if (!currentUser?.token) {
+          console.error('User not authenticated');
+          setLoading(false);
+          return;
+        }
+        
+        // Use the search API endpoint with the correct parameters
+        const baseURL = import.meta.env.VITE_API_URI;
+        let searchUrl = `${baseURL}/users/search?`;
+        
+        // Add search parameters if they exist
+        if (searchTerm) {
+          searchUrl += `name=${searchTerm}`;
+        }
+        
+        // Add role filter if it's not 'all' - don't include role parameter when 'all' is selected
+        if (roleFilter !== 'all') {
+          searchUrl += searchTerm ? `&role=${roleFilter}` : `role=${roleFilter}`;
+        }
+        
+        const response = await fetch(searchUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentUser.token}`
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          setAccounts(result.data.users || []);
+          setTotalPages(result.data.totalPages || 1);
+          setTotalItems(result.data.totalItems || (result.data.users?.length || 0));
+          // Reset current page to 1 in the UI (1-based)
+          setCurrentPage(1);
+        } else {
+          console.error('Error searching accounts:', result.message);
+        }
+      } catch (error) {
+        console.error('Error searching accounts:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      searchAccounts();
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, roleFilter, currentUser]);
   
   // Update pagination sectio
   //const [roleFilter, setRoleFilter] = useState('all');
   
   // Update the filteredAccounts to include role filtering
-  const filteredAccounts = accounts.filter(account => 
-    (account.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     account.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     account.role.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (roleFilter === 'all' || account.role.toLowerCase() === roleFilter.toLowerCase())
-  );
+  // Remove this client-side filtering code
+  // const filteredAccounts = accounts.filter(account => 
+  //   (account.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //    account.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //    (account.role?.toLowerCase() || account.roleName?.toLowerCase() || '').includes(searchTerm.toLowerCase())) &&
+  //   (roleFilter === 'all' || (account.role?.toLowerCase() || account.roleName?.toLowerCase() || '') === roleFilter.toLowerCase())
+  // );
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Format date
@@ -355,10 +450,13 @@ const Accounts = () => {
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên, email, quyền..."
+              placeholder="Tìm kiếm theo tên, email"
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                // Reset happens in the search useEffect
+              }}
             />
             <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
@@ -367,12 +465,15 @@ const Accounts = () => {
           <div className="w-full md:w-48">
             <select
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
+              onChange={(e) => {
+                setRoleFilter(e.target.value);
+                // Reset happens in the search useEffect
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">Tất cả quyền</option>
-              <option value="admin">Admin</option>
-              <option value="staff">Staff</option>
+              <option value="ADMIN">Admin</option>
+              <option value="STAFF">Staff</option>
             </select>
           </div>
         </div>

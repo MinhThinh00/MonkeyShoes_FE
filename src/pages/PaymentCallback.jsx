@@ -6,6 +6,7 @@ import Footer from '../components/Footer/Footer';
 import { FaCheckCircle, FaTimesCircle, FaHome } from 'react-icons/fa';
 
 const PaymentCallback = () => {
+  const baseURL = import.meta.env.VITE_API_URI;
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [orderDetails, setOrderDetails] = useState(null);
@@ -19,7 +20,7 @@ const PaymentCallback = () => {
         const currentUrl = window.location.href;
         
         // Call the payment-callback API with the URL parameters
-        const response = await fetch(`http://localhost:8169/api/payment/payment-callback${location.search}`);
+        const response = await fetch(`${baseURL}/payment/payment-callback${location.search}`);
         const result = await response.json();
         
         setPaymentStatus(result.success);

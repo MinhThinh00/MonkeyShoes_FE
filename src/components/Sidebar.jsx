@@ -9,6 +9,8 @@ import { FaPercentage } from 'react-icons/fa';
 function Sidebar() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const currentUser = useSelector((state) => state.user.currentUser);
+
   const handleLogout = () => {
     localStorage.removeItem('user');
     
@@ -58,10 +60,15 @@ function Sidebar() {
             <FaUsers className="h-5 w-5 mr-3 text-gray-500" />
             Khách hàng
           </NavLink>
-          <NavLink to="/dashboard/accounts" className={getNavLinkClass}>
-            <FaUserShield className="h-5 w-5 mr-3 text-gray-500" />
-            Tài khoản
-          </NavLink>
+          {currentUser && currentUser.role === 'ADMIN' && (
+             <NavLink to="/dashboard/accounts" className={getNavLinkClass}>
+             <FaUserShield className="h-5 w-5 mr-3 text-gray-500" />
+             Tài khoản
+           </NavLink>
+          )
+
+          }
+
 
           
           <NavLink to="/dashboard/discounts" className={getNavLinkClass}>
