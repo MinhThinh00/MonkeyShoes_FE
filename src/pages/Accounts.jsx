@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaSearch, FaEdit, FaTrash, FaPlus, FaEye, FaUserShield, FaTimes } from 'react-icons/fa';
 import { fetchStores } from '../helper/productApi'; // Import fetchStores function
 import { useSelector } from 'react-redux';
-import { adminCreateAccount, updateAccount,getStaffAccounts } from '../helper/accountHelper';
+import { adminCreateAccount, updateAccount, getStaffAccounts, deleteAccount } from '../helper/accountHelper';
 import { toast } from 'react-hot-toast';
 
 const Accounts = () => {
@@ -21,8 +21,8 @@ const Accounts = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'STAFF',
-    storeId: '' 
+    roleName: 'STAFF',
+    storeId: ''
   });
   const [formError, setFormError] = useState('');
   const [stores, setStores] = useState([]);
@@ -152,7 +152,7 @@ const Accounts = () => {
   
   // Update pagination sectio
   //const [roleFilter, setRoleFilter] = useState('all');
-  
+
   // Update the filteredAccounts to include role filtering
   // Remove this client-side filtering code
   // const filteredAccounts = accounts.filter(account => 
@@ -166,9 +166,9 @@ const Accounts = () => {
   // Format date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', { 
-      year: 'numeric', 
-      month: '2-digit', 
+    return date.toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
@@ -188,7 +188,7 @@ const Accounts = () => {
   // Add these state variables at the top with other states
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  
+
   // Add handleEdit function before the return statement
   const handleEdit = (account) => {
     setIsEditMode(true);
@@ -198,50 +198,50 @@ const Accounts = () => {
       email: account.email,
       password: '',
       confirmPassword: '',
-      role: account.roleName,  // Changed from account.role to account.roleName
+      roleName: account.roleName,  // Changed from account.role to account.roleName
       storeId: account.storeId || ''  // Added storeId
     });
     setShowAddForm(true);
   };
-  
+
   // Update handleSubmit function
   const handleSubmit = async (e) => {
-      e.preventDefault();
-      setFormError('');
-    
-      try {
-        if (!newAccount.userName || !newAccount.email) {
-          setFormError('Vui lòng điền đầy đủ thông tin');
-          return;
-        }
-      
-        if (!isEditMode && (!newAccount.password || !newAccount.confirmPassword)) {
-          setFormError('Vui lòng điền mật khẩu');
-          return;
-        }
-      
-        if (newAccount.password !== newAccount.confirmPassword) {
-          setFormError('Mật khẩu xác nhận không khớp');
-          return;
-        }
-  
-        if (newAccount.role === 'STAFF' && !newAccount.storeId) {
-          setFormError('Vui lòng chọn cửa hàng cho nhân viên');
-          return;
-        }
-      
+    e.preventDefault();
+    setFormError('');
+
+    try {
+      if (!newAccount.userName || !newAccount.email) {
+        setFormError('Vui lòng điền đầy đủ thông tin');
+        return;
+      }
+
+      if (!isEditMode && (!newAccount.password || !newAccount.confirmPassword)) {
+        setFormError('Vui lòng điền mật khẩu');
+        return;
+      }
+
+      if (newAccount.password !== newAccount.confirmPassword) {
+        setFormError('Mật khẩu xác nhận không khớp');
+        return;
+      }
+
+      if (newAccount.role === 'STAFF' && !newAccount.storeId) {
+        setFormError('Vui lòng chọn cửa hàng cho nhân viên');
+        return;
+      }
+
       const accountData = {
         userName: newAccount.userName,
         email: newAccount.email,
         password: newAccount.password, // Always include password in the data
-        role: newAccount.role,
+        roleName: newAccount.roleName,
         storeId: newAccount.storeId || null
       };
-  
+
       if (!isEditMode) {
         accountData.password = newAccount.password;
       }
-    
+
       if (isEditMode) {
         await updateAccount(editingId, accountData, currentUser.token);
         toast.success('Cập nhật tài khoản thành công!');
@@ -249,7 +249,7 @@ const Accounts = () => {
         await adminCreateAccount(accountData, currentUser.token);
         toast.success('Tạo tài khoản mới thành công!');
       }
-      
+
       // Reset form and close
       setShowAddForm(false);
       setIsEditMode(false);
@@ -259,7 +259,7 @@ const Accounts = () => {
         email: '',
         password: '',
         confirmPassword: '',
-        role: 'STAFF',
+        roleName: 'STAFF',
         storeId: ''
       });
       setFormError('');
@@ -268,12 +268,35 @@ const Accounts = () => {
       setFormError(error.message || 'Có lỗi xảy ra khi xử lý yêu cầu');
     }
   };
-  
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const handleDeleteClick = (account) => {
+    setSelectedAccount(account);
+    setShowConfirmDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await deleteAccount(selectedAccount.id, currentUser.token);
+      toast.success('Xóa tài khoản thành công!');
+      setShowConfirmDialog(false);
+
+      // Refresh danh sách tài khoản
+      const response = await getStaffAccounts(currentUser.token, currentPage - 1);
+      setAccounts(response.data.staff);
+      setTotalPages(response.data.totalPages);
+      setTotalItems(response.data.totalItems);
+    } catch (error) {
+      console.error('Lỗi khi xóa tài khoản:', error);
+      toast.error(error.message || 'Có lỗi xảy ra khi xóa tài khoản');
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Quản lý tài khoản</h1>
-        <button 
+        <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center"
         >
@@ -294,7 +317,7 @@ const Accounts = () => {
                     email: '',
                     password: '',
                     confirmPassword: '',
-                    role: 'STAFF'
+                    roleName: 'STAFF'
                   });
                   setFormError('');
                 }}
@@ -303,9 +326,9 @@ const Accounts = () => {
                 <FaTimes className="h-6 w-6" />
               </button>
             </div>
-            
+
             {/* Rest of the form remains unchanged */}
-            
+
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">
                 {isEditMode ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản mới'}
@@ -367,11 +390,10 @@ const Accounts = () => {
                     name="confirmPassword"
                     value={newAccount.confirmPassword}
                     onChange={handleInputChange}
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                      newAccount.confirmPassword && newAccount.password !== newAccount.confirmPassword
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${newAccount.confirmPassword && newAccount.password !== newAccount.confirmPassword
                         ? 'border-red-500'
                         : 'border-gray-300'
-                    }`}
+                      }`}
                     placeholder="Nhập lại mật khẩu"
                     required={!isEditMode}
                   />
@@ -383,7 +405,7 @@ const Accounts = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Quyền</label>
                   <select
                     name="role"
-                    value={newAccount.role}
+                    value={newAccount.roleName}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   >
@@ -391,7 +413,7 @@ const Accounts = () => {
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                
+
                 {/* Add Store Selection */}
                 <div className="flex flex-col">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cửa hàng</label>
@@ -424,7 +446,7 @@ const Accounts = () => {
                       email: '',
                       password: '',
                       confirmPassword: '',
-                      role: 'STAFF'
+                      roleName: 'STAFF'
                     });
                     setFormError('');
                   }}
@@ -460,7 +482,7 @@ const Accounts = () => {
             />
             <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
-          
+
           {/* Role filter dropdown */}
           <div className="w-full md:w-48">
             <select
@@ -500,62 +522,93 @@ const Accounts = () => {
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                   </tr>
                 </thead>
-               
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {accounts.length > 0 ? (
-                      accounts.map((account) => (
-                        <tr key={account.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{account.id}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{account.userName}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{account.email}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                              ${account.roleName === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 
-                                // account.role === 'Manager' ? 'bg-blue-100 text-blue-800' : 
-                                account.roleName === 'STAFF' ? 'bg-green-100 text-green-800' : 
+
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {accounts.length > 0 ? (
+                    accounts.map((account) => (
+                      <tr key={account.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{account.id}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{account.userName}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{account.email}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                              ${account.roleName === 'ADMIN' ? 'bg-purple-100 text-purple-800' :
+                              // account.role === 'Manager' ? 'bg-blue-100 text-blue-800' : 
+                              account.roleName === 'STAFF' ? 'bg-green-100 text-green-800' :
                                 'bg-gray-100 text-gray-800'}`}>
-                              {account.roleName}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(account.createAt)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                              ${account.isActive? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                              {account.isActive? 'Hoạt động' : 'Khóa'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex justify-end space-x-2">
-                              {/* Remove the eye/view button and keep only edit and delete */}
-                              {currentUser.userId != account.id &&(
-                                <>
-                                <button 
-                                onClick={() => handleEdit(account)} 
-                                className="text-yellow-600 hover:text-yellow-900"
-                              >
-                                <FaEdit className="h-5 w-5" />
-                              </button>
-                              <button className="text-red-600 hover:text-red-900">
-                                <FaTrash className="h-5 w-5" />
-                              </button>
+                            {account.roleName}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(account.createAt)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                              ${account.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {account.isActive ? 'Hoạt động' : 'Khóa'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex justify-end space-x-2">
+                            {/* Remove the eye/view button and keep only edit and delete */}
+                            {currentUser.userId != account.id && (
+                              <>
+                                <button
+                                  onClick={() => handleEdit(account)}
+                                  className="text-yellow-600 hover:text-yellow-900"
+                                >
+                                  <FaEdit className="h-5 w-5" />
+                                </button>
+                                <button onClick={() => handleDeleteClick(account)} className="text-red-600 hover:text-red-900">
+                                  <FaTrash className="h-5 w-5" />
+                                </button>
                               </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
-                          Không tìm thấy tài khoản nào
+                            )}
+                          </div>
                         </td>
                       </tr>
-                    )}
-                  </tbody>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                        Không tìm thấy tài khoản nào
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
               </table>
             </div>
+
+            {/* Confirmation Dialog */}
+            {showConfirmDialog && (
+              <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+                <div className="relative bg-white rounded-lg max-w-md w-full mx-auto p-6 shadow-xl">
+                  <div className="text-center mb-6">
+                    <FaTrash className="mx-auto text-red-500 text-4xl mb-4" />
+                    <h2 className="text-xl font-bold text-gray-800">Xác nhận xóa tài khoản</h2>
+                    <p className="text-gray-600 mt-2">
+                      Bạn có chắc chắn muốn xóa tài khoản <span className="font-semibold">{selectedAccount?.userName}</span>?
+                    </p>
+                    <p className="text-red-500 text-sm mt-2">Hành động này không thể hoàn tác.</p>
+                  </div>
+
+                  <div className="flex justify-center space-x-4">
+                    <button
+                      onClick={() => setShowConfirmDialog(false)}
+                      className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      onClick={confirmDelete}
+                      className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (

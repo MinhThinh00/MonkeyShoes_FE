@@ -32,6 +32,15 @@ const API_BASE = import.meta.env.VITE_API_URI;
     paymentMethod: 'cod' // Default payment method
   });
   
+  const [selectedStore, setSelectedStore] = useState(1);
+  
+  useEffect(() => {
+    const storedStore = localStorage.getItem('selectedStore');
+    if (storedStore) {
+      setSelectedStore(parseInt(storedStore));
+    }
+  }, []);
+
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [wards, setWards] = useState([]);
@@ -154,7 +163,7 @@ const API_BASE = import.meta.env.VITE_API_URI;
       const orderData = {
         ...formData,
         address: fullAddress, // Sử dụng địa chỉ đầy đủ
-        storeId: 1,
+        storeId: selectedStore? selectedStore: 1,
         items: itemsWithPrice,
         totalAmount: totalPrice,
         paymentMethod: formData.paymentMethod,
