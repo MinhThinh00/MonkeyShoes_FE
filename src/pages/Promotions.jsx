@@ -287,7 +287,7 @@ const Promotions = () => {
 
   useEffect(() => {
     fetchDiscounts();
-  }, [currentUser]);
+  }, [currentUser],[]);
 
   const fetchDiscounts = async () => {
     setLoading(true);

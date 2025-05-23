@@ -10,8 +10,11 @@ import axios from 'axios';
 const Products = () => {
 
   const baseURL = import.meta.env.VITE_API_URI;
-
-  const [storeId, setStoreId] = useState(1);
+  const getInitialStoreId = () => {
+    const storedStoreId = localStorage.getItem('selectedStore');
+    return storedStoreId ? parseInt(storedStoreId) : 1;
+  };
+  const [storeId, setStoreId] = useState(getInitialStoreId);
   const [stores, setStores] = useState([]);
   const [currentStore, setCurrentStore] = useState(null);
   const [showStoreSelector, setShowStoreSelector] = useState(false);
@@ -34,26 +37,24 @@ const Products = () => {
   console.log("Current category:", category);
 
   useEffect(() => {
-    const storedStoreId = localStorage.getItem('selectedStore');
-    if (storedStoreId) {
-      setStoreId(parseInt(storedStoreId));
-      fetchStoreDetails(parseInt(storedStoreId));
-    } else {
-      // Nếu chưa có store được chọn, sử dụng mặc định là 1
-      setStoreId(1);
-      localStorage.setItem('selectedStore', '1');
-      fetchStoreDetails(1);
-    }
+    const currentStoreId = storeId;
+    localStorage.setItem('selectedStore', currentStoreId.toString());
     
-    // Lấy danh sách cửa hàng
-    fetchStores();
-  }, []);
+    // Fetch song song
+    Promise.all([
+      fetchStores(),
+      fetchStoreDetails(currentStoreId)
+    ]).catch(error => {
+      console.error('Error during initial data fetch:', error);
+    });
+  }, []); 
   
   // Hàm để lấy danh sách cửa hàng
   const fetchStores = async () => {
     try {
       const response = await axios.get(`${baseURL}/store`);
       setStores(response.data || []);
+      return response.data || []; 
     } catch (error) {
       console.error('Error fetching stores:', error);
       
@@ -79,6 +80,7 @@ const Products = () => {
     localStorage.setItem('selectedStore', id);
     setShowStoreSelector(false);
     fetchStoreDetails(id);
+    clearFilters();
     
     // Đảm bảo storeId được cập nhật trước khi gọi fetchProducts
     setTimeout(() => {
@@ -360,7 +362,7 @@ useEffect(() => {
             <div className="flex items-center">
               <FaStore className="text-blue-600 mr-2" />
               <span className="text-gray-700">
-                Bạn đang xem sản phẩm tại: <span className="font-semibold">{currentStore ? currentStore.name : 'monkey shoseee'}</span>
+                Bạn đang xem sản phẩm tại: <span className="font-semibold">{currentStore ? currentStore.name : 'Đang tải...'}</span>
               </span>
             </div>
             <button 
