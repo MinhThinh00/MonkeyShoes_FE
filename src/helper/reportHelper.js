@@ -64,4 +64,19 @@ export const getTopProductsByStore = async (month, year, token) => {
       throw error;
     }
   };
+
+  export const getSummaryReport = async (token) => {
+    try {
+      const response = await axios.get(`${API_BASE}/report/stores/summary`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch top products by store:', error);
+      throw error;
+    }
+  }
   

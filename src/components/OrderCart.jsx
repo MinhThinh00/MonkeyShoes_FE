@@ -42,7 +42,7 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
 
   // Get the first item's image to display as the main image
   const mainImage = order.items[0]?.variant?.img || 'https://via.placeholder.com/150';
-  
+
   // Get product names for display
   const productNames = order.items.map(item => `${item.variant.name} (x${item.quantity})`).join(', ');
 
@@ -63,12 +63,12 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
 
   return (
     <>
-      <div 
-        className="order-card" 
+      <div
+        className="order-card"
         onClick={() => setShowDetails(true)}
-        style={{ 
-          marginBottom: 16, 
-          borderRadius: 8, 
+        style={{
+          marginBottom: 16,
+          borderRadius: 8,
           border: '1px solid #e8e8e8',
           boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
           backgroundColor: '#fff',
@@ -87,9 +87,9 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
           overflow: 'hidden',
           backgroundColor: '#f5f5f5'
         }}>
-          <img 
-            src={order.items[0]?.variant?.img || 'https://via.placeholder.com/150'} 
-            alt="Product" 
+          <img
+            src={order.items[0]?.variant?.img || 'https://via.placeholder.com/150'}
+            alt="Product"
             style={{
               width: '100%',
               height: '100%',
@@ -99,7 +99,7 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
         </div>
 
         {/* Order Details */}
-        <div className="order-details" style={{ 
+        <div className="order-details" style={{
           flex: 1,
           padding: '16px',
           display: 'flex',
@@ -115,16 +115,16 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
               <FaShoppingBag />
               <span style={{ fontWeight: 'bold' }}>Đơn hàng #{order.id}</span>
             </div>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
               gap: '8px',
               padding: '4px 8px',
               borderRadius: '4px',
               backgroundColor: `${getStatusColor(order.status)}20`,
               color: getStatusColor(order.status)
             }}>
-              <span style={{ 
+              <span style={{
                 display: 'inline-block',
                 width: '8px',
                 height: '8px',
@@ -134,42 +134,42 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
               }}></span>
               <span className="font-medium">
                 {order.status === 'PENDING' ? 'Chờ xác nhận' :
-                 order.status === 'PROCESSING' ? 'Đang xử lý' :
-                 order.status === 'SHIPPED' ? 'Đang giao hàng' :
-                 order.status === 'COMPLETED' ? 'Hoàn thành' :
-                 order.status === 'CANCELLED' ? 'Đã hủy' : order.status}
+                  order.status === 'PROCESSING' ? 'Đang xử lý' :
+                    order.status === 'SHIPPED' ? 'Đang giao hàng' :
+                      order.status === 'COMPLETED' ? 'Hoàn thành' :
+                        order.status === 'CANCELLED' ? 'Đã hủy' : order.status}
               </span>
             </div>
           </div>
-  
+
           {/* Product Names */}
           <div style={{ marginBottom: '12px' }}>
             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Sản phẩm:</div>
             <div style={{ fontSize: '14px' }}>{productNames}</div>
           </div>
-  
+
           {/* Order Info */}
-          <div style={{ 
-            display: 'flex', 
+          <div style={{
+            display: 'flex',
             justifyContent: 'space-between',
             marginBottom: '12px',
             fontSize: '14px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FaCreditCard />
-              <span>{order.payment.paymentMethod === 'VNPAY' ? 'VN Pay' : 
-                      order.payment.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' : 
-                      order.payment.paymentMethod}</span>
+              <span>{order.payment.paymentMethod === 'VNPAY' ? 'VN Pay' :
+                order.payment.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' :
+                  order.payment.paymentMethod}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FaClock />
               <span>{formatDate(order.createdAt)}</span>
             </div>
           </div>
-  
+
           {/* Order Footer */}
-          <div style={{ 
-            display: 'flex', 
+          <div style={{
+            display: 'flex',
             justifyContent: 'space-between',
             marginTop: 'auto',
             paddingTop: '12px',
@@ -183,7 +183,7 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
               <div style={{ fontWeight: 'bold', fontSize: '16px' }}>
                 {formatCurrency(order.totalPrice)}
               </div>
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowDetails(true);
@@ -196,21 +196,21 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
           </div>
         </div>
       </div>
-  
+
       {/* Chi tiết đơn hàng Dialog */}
       {showDetails && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Chi tiết đơn hàng #{order.id}</h2>
-              <button 
+              <button
                 onClick={() => setShowDetails(false)}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <FaTimes className="w-6 h-6" />
               </button>
             </div>
-  
+
             <div className="space-y-6">
               {/* Thông tin đơn hàng */}
               <div className="grid grid-cols-2 gap-4">
@@ -220,7 +220,7 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Trạng thái</p>
-                  <div style={{ 
+                  <div style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     padding: '4px 8px',
@@ -228,7 +228,7 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
                     backgroundColor: `${getStatusColor(order.status)}20`,
                     color: getStatusColor(order.status)
                   }}>
-                    <span style={{ 
+                    <span style={{
                       display: 'inline-block',
                       width: '8px',
                       height: '8px',
@@ -238,10 +238,10 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
                     }}></span>
                     <span className="font-medium">
                       {order.status === 'PENDING' ? 'Chờ xác nhận' :
-                       order.status === 'PROCESSING' ? 'Đang xử lý' :
-                       order.status === 'SHIPPED' ? 'Đang giao hàng' :
-                       order.status === 'COMPLETED' ? 'Hoàn thành' :
-                       order.status === 'CANCELLED' ? 'Đã hủy' : order.status}
+                        order.status === 'PROCESSING' ? 'Đang xử lý' :
+                          order.status === 'SHIPPED' ? 'Đang giao hàng' :
+                            order.status === 'COMPLETED' ? 'Hoàn thành' :
+                              order.status === 'CANCELLED' ? 'Đã hủy' : order.status}
                     </span>
                   </div>
                 </div>
@@ -252,9 +252,9 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
                   {order.items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between border-b pb-4">
                       <div className="flex items-center space-x-4">
-                        <img 
-                          src={item.variant.img} 
-                          alt={item.variant.name} 
+                        <img
+                          src={item.variant.img}
+                          alt={item.variant.name}
                           className="w-20 h-20 object-cover rounded"
                         />
                         <div>
@@ -276,19 +276,21 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
                   <p className="flex items-center">
                     <FaCreditCard className="mr-2" />
                     {order.payment.paymentMethod === 'VNPAY' ? 'VN Pay' :
-                     order.payment.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' :
-                     order.payment.paymentMethod}
+                      order.payment.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' :
+                        order.payment.paymentMethod}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-2">Địa chỉ giao hàng</p>
                   <p className="flex items-center">
                     <FaHome className="mr-2" />
-                    {order.shippingAddress.address}
+                    {order.shippingAddress
+                      ? `${order.shippingAddress.address}, ${order.shippingAddress.ward}, ${order.shippingAddress.district}, ${order.shippingAddress.province}`
+                      : 'Không có'}
                   </p>
                 </div>
               </div>
-  
+
               {/* Tổng tiền và nút hủy đơn */}
               <div className="flex justify-between items-center pt-4 border-t">
                 <div className="text-lg">
@@ -313,7 +315,7 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
           </div>
         </div>
       )}
-  
+
       {/* Dialog xác nhận hủy đơn */}
       {showCancelConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">

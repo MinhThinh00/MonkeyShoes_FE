@@ -51,6 +51,22 @@ const Infor = () => {
     }
   });
 
+  // Di chuyển fetchUserAddresses ra khỏi useEffect
+  const fetchUserAddresses = async () => {
+    try {
+      const { data } = await api.get(`/address/user/${currentUser.userId}`, {
+        headers: { Authorization: `Bearer ${currentUser.token}` }
+      });
+
+      // Sort addresses with default first
+      const sorted = [...data].sort((a, b) => (b.isDefault ? 1 : -1));
+      setAddresses(sorted);
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
+      toast.error(error.response?.data?.message || 'Không thể tải danh sách địa chỉ');
+    }
+  };
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -101,21 +117,6 @@ const Infor = () => {
         });
       } finally {
         setLoading(false);
-      }
-    };
-
-    const fetchUserAddresses = async () => {
-      try {
-        const { data } = await api.get(`/address/user/${currentUser.userId}`, {
-          headers: { Authorization: `Bearer ${currentUser.token}` }
-        });
-
-        // Sort addresses with default first
-        const sorted = [...data].sort((a, b) => (b.isDefault ? 1 : -1));
-        setAddresses(sorted);
-      } catch (error) {
-        console.error('Error fetching addresses:', error);
-        toast.error(error.response?.data?.message || 'Không thể tải danh sách địa chỉ');
       }
     };
 
@@ -365,11 +366,16 @@ const Infor = () => {
         return;
       }
 
+      // Lấy tên tỉnh/thành, quận/huyện, phường/xã từ code
+      const provinceName = provinces.find(p => p.code == currentAddress.province)?.name || '';
+      const districtName = districts.find(d => d.code == currentAddress.district)?.name || '';
+      const wardName = wards.find(w => w.code == currentAddress.ward)?.name || '';
+
       const addressData = {
         phone: currentAddress.phone,
-        province: currentAddress.province,
-        district: currentAddress.district,
-        ward: currentAddress.ward,
+        province: provinceName, // Lưu tên thay vì code
+        district: districtName, // Lưu tên thay vì code
+        ward: wardName, // Lưu tên thay vì code
         address: currentAddress.address,
         isDefault: currentAddress.isDefault,
         userId: currentUser.userId
@@ -411,9 +417,9 @@ const Infor = () => {
   };
 
   const handleEditAddress = (address) => {
-    const provinceCode = provinces.find(p => 
-      p.code == address.province || p.name === address.province
-    )?.code;
+    // Tìm code của tỉnh/thành từ tên
+    const provinceObj = provinces.find(p => p.name === address.province);
+    const provinceCode = provinceObj?.code;
 
     // Fetch districts first
     const fetchDistrictsForEdit = async () => {
@@ -423,10 +429,9 @@ const Infor = () => {
         const data = await response.json();
         setDistricts(data.districts || []);
         
-        // Now find district code from the fetched districts
-        const districtCode = data.districts?.find(d => 
-          d.name === address.district || d.code == address.district
-        )?.code;
+        // Tìm code của quận/huyện từ tên
+        const districtObj = data.districts?.find(d => d.name === address.district);
+        const districtCode = districtObj?.code;
 
         if (districtCode) {
           // Fetch wards
@@ -434,12 +439,11 @@ const Infor = () => {
           const wardData = await wardResponse.json();
           setWards(wardData.wards || []);
           
-          // Find ward code
-          const wardCode = wardData.wards?.find(w => 
-            w.name === address.ward || w.code == address.ward
-          )?.code;
+          // Tìm code của phường/xã từ tên
+          const wardObj = wardData.wards?.find(w => w.name === address.ward);
+          const wardCode = wardObj?.code;
 
-          // Set current address with all codes
+          // Set current address với code để hiển thị đúng trong dropdown
           setCurrentAddress({
             ...address,
             province: provinceCode,
@@ -646,9 +650,9 @@ const Infor = () => {
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <p><span className="font-medium">Số điện thoại:</span> {address.phone}</p>
-                  <p><span className="font-medium">Tỉnh/Thành phố:</span> {provinces.find(p => p.code == address.province)?.name || address.province}</p>
-                  <p><span className="font-medium">Quận/Huyện:</span> {districts.find(d => d.code == address.district)?.name || address.district}</p>
-                  <p><span className="font-medium">Phường/Xã:</span> {wards.find(w => w.code == address.ward)?.name || address.ward}</p>
+                  <p><span className="font-medium">Tỉnh/Thành phố:</span> {address.province}</p>
+                  <p><span className="font-medium">Quận/Huyện:</span> {address.district}</p>
+                  <p><span className="font-medium">Phường/Xã:</span> {address.ward}</p>
                   <p className="md:col-span-2"><span className="font-medium">Địa chỉ chi tiết:</span> {address.address}</p>
                 </div>
                 <div className="mt-3 flex space-x-2">

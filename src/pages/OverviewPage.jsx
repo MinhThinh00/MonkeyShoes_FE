@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { FaShoppingBag, FaDollarSign, FaCube, FaUsers, FaCalendarAlt } from 'react-icons/fa'; 
 import { useSelector } from 'react-redux';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { getYearlyRevenueReport, getMonthlyCategoryRevenueReport,getTopProductsByStore, formatCurrency, formatCompactCurrency } from '../helper/reportHelper';
+import { getYearlyRevenueReport, getMonthlyCategoryRevenueReport,getTopProductsByStore, formatCurrency, formatCompactCurrency,getSummaryReport } from '../helper/reportHelper';
+import { Link } from 'react-router-dom';
 
 function OverviewPage() {
   const currentUser = useSelector((state) => state.user.currentUser);
@@ -14,6 +15,7 @@ function OverviewPage() {
   const [error, setError] = useState(null);
   const [categoryError, setCategoryError] = useState(null);
   const [topProductsData, setTopProductsData] = useState({ data: [] });
+  const [reportSummary,setReportSummary] = useState();
   // Get current month and year
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1); // JavaScript months are 0-indexed
@@ -55,8 +57,22 @@ function OverviewPage() {
         // setTopProductsLoading(false);
       }
     };
-    
+    const fetchReportSummary = async () => {
+      try {
+        const data = await getSummaryReport( currentUser.token);
+        console.log('Fetched top products data:', data);
+        setReportSummary(data);
+        console.log('Fetched Report Summary:', reportSummary);
+      } catch (err) {
+        console.error('Error fetching top products data:', err);
+      } finally {
+        // setTopProductsLoading(false);
+      }
+    }
+    fetchReportSummary();
     fetchTopProductsData();
+    console.log('Fetched top products data:', topProductsData);
+    console.log('Fetched Report Summary:', reportSummary);
   }, [currentUser, selectedMonth, selectedYear]);
 
   // Fetch category data when month or year changes
@@ -188,15 +204,15 @@ function OverviewPage() {
             </div>
             <div className="ml-4">
               <h2 className="font-semibold text-gray-600 text-sm">Đơn hàng</h2>
-              <p className="font-bold text-2xl text-gray-800">0</p>
+              <p className="font-bold text-2xl text-gray-800">{reportSummary?.totalOrders || 0}</p>
             </div>
           </div>
-          <div className="mt-4">
+          {/* <div className="mt-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500">Hôm nay</span>
               <span className="text-xs font-medium text-green-600">+0%</span>
             </div>
-          </div>
+          </div> */}
         </div>
         
         <div className="bg-white rounded-lg shadow p-6 border border-gray-100">
@@ -206,15 +222,15 @@ function OverviewPage() {
             </div>
             <div className="ml-4">
               <h2 className="font-semibold text-gray-600 text-sm">Doanh thu</h2>
-              <p className="font-bold text-2xl text-gray-800">0₫</p>
+              <p className="font-bold text-2xl text-gray-800">{formatCurrency(reportSummary?.totalRevenue) || '0₫'}</p>
             </div>
           </div>
-          <div className="mt-4">
+          {/* <div className="mt-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500">Tháng này</span>
               <span className="text-xs font-medium text-green-600">+0%</span>
             </div>
-          </div>
+          </div> */}
         </div>
         
         <div className="bg-white rounded-lg shadow p-6 border border-gray-100">
@@ -223,16 +239,16 @@ function OverviewPage() {
               <FaCube className="h-8 w-8" />
             </div>
             <div className="ml-4">
-              <h2 className="font-semibold text-gray-600 text-sm">Sản phẩm</h2>
-              <p className="font-bold text-2xl text-gray-800">0</p>
+              <h2 className="font-semibold text-gray-600 text-sm">Sản phẩm đã bán</h2>
+              <p className="font-bold text-2xl text-gray-800">{reportSummary?.totalProductsSold || 0}</p>
             </div>
           </div>
-          <div className="mt-4">
+          {/* <div className="mt-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500">Tổng số</span>
-              <span className="text-xs font-medium text-blue-600">Xem tất cả</span>
+              <Link  className="text-xs font-medium text-blue-600">Xem tất cả</Link>
             </div>
-          </div>
+          </div> */}
         </div>
         
         <div className="bg-white rounded-lg shadow p-6 border border-gray-100">
@@ -242,13 +258,13 @@ function OverviewPage() {
             </div>
             <div className="ml-4">
               <h2 className="font-semibold text-gray-600 text-sm">Khách hàng</h2>
-              <p className="font-bold text-2xl text-gray-800">0</p>
+              <p className="font-bold text-2xl text-gray-800">{reportSummary?.totalCustomers || 0}</p>
             </div>
           </div>
           <div className="mt-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500">Tổng số</span>
-              <span className="text-xs font-medium text-blue-600">Xem tất cả</span>
+              <Link to="/dashboard/customers" className="text-xs font-medium text-blue-600">Xem tất cả</Link>
             </div>
           </div>
         </div>

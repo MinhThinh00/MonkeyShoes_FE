@@ -4,10 +4,11 @@ import Sidebar from '../components/Sidebar';
 import { FaSearch, FaBell, FaBars } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 
-
 function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const currentUser = useSelector((state) => state.user.currentUser);
+
+  console.log('currentUser:', currentUser); // Debug để kiểm tra dữ liệu
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -26,24 +27,24 @@ function DashboardLayout() {
             <div className="flex items-center">
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-md text-gray-600 hover:bg-gray-100 mr-4 focus:outline-none"
+                className="p-2 rounded-md text-gray-600 hover:bg-gray-100 mr-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <FaBars className="h-5 w-5" />
               </button>
               <h2 className="text-xl font-semibold text-gray-800">Monkey Shoes Admin</h2>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                  <FaSearch className="h-5 w-5 text-gray-400" />
-                </span>
-                <input type="text" placeholder="Tìm kiếm..." className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-              </div>
-              <button className="p-1 rounded-full text-gray-400 hover:text-gray-600 focus:outline-none">
+             
+              <button className="p-1 rounded-full text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <FaBell className="h-6 w-6" />
               </button>
-              <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-                A
+              <div className="flex items-center space-x-2">
+                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                  {currentUser && currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'A'}
+                </div>
+                <div className="text-gray-800 font-medium text-sm">
+                  {currentUser && currentUser.name ? currentUser.name : 'Khách'}
+                </div>
               </div>
             </div>
           </div>

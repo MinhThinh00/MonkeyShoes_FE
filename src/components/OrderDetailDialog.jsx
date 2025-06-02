@@ -9,7 +9,7 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
   const [error, setError] = useState(null);
   const [newStatus, setNewStatus] = useState('');
   const [updating, setUpdating] = useState(false);
-  
+
   useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
@@ -29,17 +29,17 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
         setLoading(false);
       }
     };
-    
+
     fetchOrderDetails();
   }, [orderId, token]);
-  
+
   const handleStatusChange = async () => {
     try {
       setUpdating(true);
       if (token) {
         const response = await updateOrderStatus(orderId, newStatus, token);
         if (response && response.data) {
-          setOrder({...order, status: newStatus});
+          setOrder({ ...order, status: newStatus });
           if (onStatusUpdate) {
             onStatusUpdate(orderId, newStatus);
           }
@@ -54,13 +54,13 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
       setUpdating(false);
     }
   };
-  
+
   // Format date function
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', { 
-      year: 'numeric', 
-      month: 'long', 
+    return date.toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -71,7 +71,7 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
   };
-  
+
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -83,7 +83,7 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -102,7 +102,7 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
       </div>
     );
   }
-  
+
   if (!order) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -121,7 +121,7 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
       </div>
     );
   }
-  
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -131,7 +131,7 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
             <FaTimes className="h-5 w-5" />
           </button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Order Summary */}
           <div className="md:col-span-2">
@@ -151,7 +151,7 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
                     <option value="COMPLETED">Hoàn Thành</option>
                     <option value="CANCELLED">Hủy Đơn Hàng</option>
                   </select>
-                  <button 
+                  <button
                     onClick={handleStatusChange}
                     className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 flex items-center"
                     disabled={updating || newStatus === order.status}
@@ -162,7 +162,7 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
                 </div>
               )}
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <p className="text-sm text-gray-600">Ngày đặt hàng</p>
@@ -179,14 +179,14 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
               <div>
                 <p className="text-sm text-gray-600">Phương thức thanh toán</p>
                 <p className="text-gray-900">
-                  {order.payment?.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' : 
-                   order.payment?.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 
-                   order.payment?.paymentMethod === 'CREDIT_CARD' ? 'Thẻ tín dụng' : 
-                   order.payment?.paymentMethod}
+                  {order.payment?.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' :
+                    order.payment?.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' :
+                      order.payment?.paymentMethod === 'CREDIT_CARD' ? 'Thẻ tín dụng' :
+                        order.payment?.paymentMethod}
                 </p>
               </div>
             </div>
-            
+
             <div className="mb-4">
               <h3 className="font-semibold text-gray-800 mb-2">Sản phẩm</h3>
               <div className="border rounded-lg overflow-hidden">
@@ -212,8 +212,8 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
                       <tr key={item.id}>
                         <td className="px-4 py-2">
                           <div className="flex items-center">
-                            <img 
-                              src={item.variant.img} 
+                            <img
+                              src={item.variant.img}
                               alt={item.variant.name}
                               className="h-12 w-12 object-cover rounded-md mr-2"
                             />
@@ -243,7 +243,7 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
               </div>
             </div>
           </div>
-          
+
           {/* Customer and Shipping Info */}
           <div className="space-y-4">
             <div className="border border-gray-200 rounded-lg p-4">
@@ -263,13 +263,17 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
                 </div>
               </div>
             </div>
-            
+
             <div className="border border-gray-200 rounded-lg p-4">
               <h3 className="font-semibold text-gray-800 mb-2">Thông tin giao hàng</h3>
               <div className="space-y-2">
                 <div>
                   <p className="text-sm text-gray-600">Địa chỉ giao hàng</p>
-                  <p className="text-gray-900">{order.shippingAddress?.address || 'Không có'}</p>
+                  <p className="text-gray-900">
+                    {order.shippingAddress
+                      ? `${order.shippingAddress.address}, ${order.shippingAddress.ward}, ${order.shippingAddress.district}, ${order.shippingAddress.province}`
+                      : 'Không có'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Số điện thoại</p>
@@ -277,31 +281,30 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
                 </div>
               </div>
             </div>
-            
+
             <div className="border border-gray-200 rounded-lg p-4">
               <h3 className="font-semibold text-gray-800 mb-2">Thông tin thanh toán</h3>
               <div className="space-y-2">
                 <div>
                   <p className="text-sm text-gray-600">Phương thức thanh toán</p>
                   <p className="text-gray-900">
-                    {order.payment?.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' : 
-                     order.payment?.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 
-                     order.payment?.paymentMethod === 'CREDIT_CARD' ? 'Thẻ tín dụng' : 
-                     order.payment?.paymentMethod}
+                    {order.payment?.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' :
+                      order.payment?.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' :
+                        order.payment?.paymentMethod === 'CREDIT_CARD' ? 'Thẻ tín dụng' :
+                          order.payment?.paymentMethod}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Trạng thái thanh toán</p>
-                  <p className={`${
-                    order.payment?.status === 'PENDING' ? 'text-yellow-600' : 
-                    order.payment?.status === 'COMPLETED' ? 'text-green-600' : 
-                    order.payment?.status === 'FAILED' ? 'text-red-600' : 
-                    'text-gray-900'
-                  } font-medium`}>
-                    {order.payment?.status === 'PENDING' ? 'Chờ thanh toán' : 
-                     order.payment?.status === 'COMPLETED' ? 'Đã thanh toán' : 
-                     order.payment?.status === 'FAILED' ? 'Thanh toán thất bại' : 
-                     order.payment?.status}
+                  <p className={`${order.payment?.status === 'PENDING' ? 'text-yellow-600' :
+                      order.payment?.status === 'COMPLETED' ? 'text-green-600' :
+                        order.payment?.status === 'FAILED' ? 'text-red-600' :
+                          'text-gray-900'
+                    } font-medium`}>
+                    {order.payment?.status === 'PENDING' ? 'Chờ thanh toán' :
+                      order.payment?.status === 'COMPLETED' ? 'Đã thanh toán' :
+                        order.payment?.status === 'FAILED' ? 'Thanh toán thất bại' :
+                          order.payment?.status}
                   </p>
                 </div>
               </div>

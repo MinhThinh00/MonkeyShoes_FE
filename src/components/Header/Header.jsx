@@ -31,11 +31,11 @@ const Header = ({ onSearch }) => {
       });
       const data = await response.json();
       
-      console.log('response data', data);
-      setUserLogin(data);
-      // The userLogin state won't be updated immediately after setUserLogin
-      // So we should use the data directly if we need to log it
-      console.log('userLogin from response', data);
+      // Sửa thành:
+      if (data && data.data) {
+        setUserLogin(data.data); // Giả sử API trả về data.data chứa thông tin user
+        console.log('User data:', data.data);
+      }
       
     } catch (error) {
       throw error;
@@ -169,7 +169,10 @@ const Header = ({ onSearch }) => {
                       <FaUserCircle className="h-7 w-7 text-blue-500" />
                     )}
                   </div>
-                  <span className="ml-2 font-medium">{userLogin ? userLogin.name : currentUser.name}</span>
+               
+                  <span className="ml-2 font-medium">
+                    {(userLogin && userLogin.name) || currentUser?.name || 'Khách'}
+                  </span>
                 </button>
                 
                 {showDropdown && (
