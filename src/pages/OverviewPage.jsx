@@ -322,10 +322,33 @@ function OverviewPage() {
         {/* Orders section */}
         <div className="bg-white rounded-lg shadow border border-gray-100">
           <div className="p-6 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-800">Đơn hàng gần đây</h3>
+            <h3 className="font-semibold text-gray-800">Các sản phẩm bán chạy nhất</h3>
           </div>
-          <div className="p-6 flex items-center justify-center h-64">
-            <p className="text-gray-500">Chưa có đơn hàng nào</p>
+          <div className="p-6">
+            {topProductsData.data?.length > 0 ? (
+              <div className="space-y-4">
+                {topProductsData.data[0]?.store1?.map((product, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <img 
+                        src={product.img} 
+                        alt={product.productName}
+                        className="h-12 w-12 object-cover rounded"
+                      />
+                      <span className="font-medium">{product.productName}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Đã bán: {product.totalQuantitySold}</p>
+                      <p className="font-semibold text-blue-600">
+                        {formatCurrency(product.totalRevenue)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">Chưa có dữ liệu sản phẩm</p>
+            )}
           </div>
         </div>
       </div>
