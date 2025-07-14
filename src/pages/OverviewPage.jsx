@@ -44,13 +44,14 @@ function OverviewPage() {
     fetchRevenueData();
   }, [currentUser, selectedYear]);
 
+  // Trong useEffect
   useEffect(() => {
     const fetchTopProductsData = async () => {
       try {
         const data = await getTopProductsByStore(selectedMonth, selectedYear, currentUser.token);
-        console.log('Fetched top products data:', data);
+        console.log('Fetched top products data:', data); // Log dữ liệu từ API
         setTopProductsData(data);
-        console.log('Fetched top products data:', topProductsData);
+        // Không log topProductsData ở đây vì state chưa được cập nhật
       } catch (err) {
         console.error('Error fetching top products data:', err);
       } finally {
@@ -71,8 +72,7 @@ function OverviewPage() {
     }
     fetchReportSummary();
     fetchTopProductsData();
-    console.log('Fetched top products data:', topProductsData);
-    console.log('Fetched Report Summary:', reportSummary);
+    // Bỏ log ở đây
   }, [currentUser, selectedMonth, selectedYear]);
 
   // Fetch category data when month or year changes
@@ -324,27 +324,34 @@ function OverviewPage() {
           <div className="p-6 border-b border-gray-100">
             <h3 className="font-semibold text-gray-800">Các sản phẩm bán chạy nhất</h3>
           </div>
+          
           <div className="p-6">
-            {topProductsData.data?.length > 0 ? (
+            {topProductsData.data && topProductsData.data.length > 0 ? (
               <div className="space-y-4">
-                {topProductsData.data[0]?.store1?.map((product, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <img 
-                        src={product.img} 
-                        alt={product.productName}
-                        className="h-12 w-12 object-cover rounded"
-                      />
-                      <span className="font-medium">{product.productName}</span>
+                {/* Kiểm tra cấu trúc dữ liệu và hiển thị linh hoạt hơn */}
+                {Object.keys(topProductsData.data[0] || {}).map(storeKey => {
+                  const products = topProductsData.data[0][storeKey];
+                  if (!Array.isArray(products) || products.length === 0) return null;
+                  
+                  return products.map((product, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <img 
+                          src={product.img} 
+                          alt={product.productName}
+                          className="h-12 w-12 object-cover rounded"
+                        />
+                        <span className="font-medium">{product.productName}</span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600">Đã bán: {product.totalQuantitySold}</p>
+                        <p className="font-semibold text-blue-600">
+                          {formatCurrency(product.totalRevenue)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Đã bán: {product.totalQuantitySold}</p>
-                      <p className="font-semibold text-blue-600">
-                        {formatCurrency(product.totalRevenue)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  ));
+                })}
               </div>
             ) : (
               <p className="text-gray-500">Chưa có dữ liệu sản phẩm</p>

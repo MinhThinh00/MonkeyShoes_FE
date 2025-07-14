@@ -13,7 +13,7 @@ const UserDetailDialog = ({ user, onClose, token }) => {
       setLoading(true);
       try {
         // Updated API endpoint with pagination parameter
-        const response = await fetch(`${baseURL}/orders/user/${user.id}?page=0`, {
+        const response = await fetch(`${baseURL}/orders/user/getall/${user.id}?page=0`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

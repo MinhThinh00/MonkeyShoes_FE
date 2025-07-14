@@ -134,7 +134,7 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
               }}></span>
               <span className="font-medium">
                 {order.status === 'PENDING' ? 'Chờ xác nhận' :
-                  order.status === 'PROCESSING' ? 'Đang xử lý' :
+                  order.status === 'PROCESSING' ? 'Chờ Shipper đến lấy hàng' :
                     order.status === 'SHIPPED' ? 'Đang giao hàng' :
                       order.status === 'COMPLETED' ? 'Hoàn thành' :
                         order.status === 'CANCELLED' ? 'Đã hủy' : order.status}
@@ -238,7 +238,7 @@ const OrderCart = ({ order, onOrderStatusChange }) => {
                     }}></span>
                     <span className="font-medium">
                       {order.status === 'PENDING' ? 'Chờ xác nhận' :
-                        order.status === 'PROCESSING' ? 'Đang xử lý' :
+                        order.status === 'PROCESSING' ? 'Chờ Shipper đến lấy hàng' :
                           order.status === 'SHIPPED' ? 'Đang giao hàng' :
                             order.status === 'COMPLETED' ? 'Hoàn thành' :
                               order.status === 'CANCELLED' ? 'Đã hủy' : order.status}

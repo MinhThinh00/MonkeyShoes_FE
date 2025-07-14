@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getOrderById, updateOrderStatus } from '../helper/orderHelper';
-import { FaTimes, FaSave } from 'react-icons/fa';
+import { FaTimes, FaSave, FaPrint } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
@@ -44,7 +44,7 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
             onStatusUpdate(orderId, newStatus);
           }
           toast.success('Cập nhật trạng thái đơn hàng thành công!');
-          onClose(); // Close the dialog after successful update
+          onClose();
         }
       }
     } catch (error) {
@@ -55,7 +55,6 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
     }
   };
 
-  // Format date function
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('vi-VN', {
@@ -67,9 +66,232 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
     });
   };
 
-  // Format currency function
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  };
+
+  const handlePrint = () => {
+    // Tạo nội dung HTML để in
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Đơn hàng #${order.id}</title>
+        <meta charset="utf-8">
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            margin: 0; 
+            line-height: 1.4;
+          }
+          h2, h3 { 
+            color: #333; 
+            margin-bottom: 10px;
+          }
+          .section { 
+            margin-bottom: 25px; 
+            page-break-inside: avoid;
+          }
+          .grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 20px; 
+            margin-bottom: 15px;
+          }
+          .info-item {
+            margin-bottom: 8px;
+          }
+          .info-label {
+            font-weight: bold;
+            color: #555;
+          }
+          .table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px; 
+          }
+          .table th, .table td { 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            text-align: left; 
+          }
+          .table th { 
+            background-color: #f8f9fa; 
+            font-weight: bold;
+          }
+          .total-row {
+            font-weight: bold;
+            background-color: #f8f9fa;
+          }
+          .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+          }
+          .status-pending { background-color: #fff3cd; color: #856404; }
+          .status-processing { background-color: #cce5ff; color: #004085; }
+          .status-shipped { background-color: #d4edda; color: #155724; }
+          .status-completed { background-color: #d1ecf1; color: #0c5460; }
+          .status-cancelled { background-color: #f8d7da; color: #721c24; }
+          @media print {
+            body { padding: 10px; }
+            .section { page-break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="section">
+          <h2>CHI TIẾT ĐỞN HÀNG #${order.id}</h2>
+          <p><strong>Ngày in:</strong> ${new Date().toLocaleDateString('vi-VN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}</p>
+        </div>
+
+        <div class="section">
+          <h3>Thông tin đơn hàng</h3>
+          <div class="grid">
+            <div>
+              <div class="info-item">
+                <span class="info-label">Ngày đặt hàng:</span> ${formatDate(order.createdAt)}
+              </div>
+              <div class="info-item">
+                <span class="info-label">Trạng thái:</span> 
+                <span class="status-badge status-${order.status.toLowerCase()}">
+                  ${order.status === 'PENDING' ? 'Chờ Xác Nhận' :
+                    order.status === 'PROCESSING' ? 'Đang Xử Lý' :
+                    order.status === 'SHIPPED' ? 'Chờ Giao Hàng' :
+                    order.status === 'COMPLETED' ? 'Hoàn Thành' :
+                    order.status === 'CANCELLED' ? 'Hủy Đơn Hàng' : order.status}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div class="info-item">
+                <span class="info-label">Khách hàng:</span> ${order.userName}
+              </div>
+              <div class="info-item">
+                <span class="info-label">Tổng tiền:</span> <strong>${formatCurrency(order.totalPrice)}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Sản phẩm</h3>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Sản phẩm</th>
+                <th>Đơn giá</th>
+                <th>Số lượng</th>
+                <th>Thành tiền</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.items && order.items.map((item) => `
+                <tr>
+                  <td>
+                    <div><strong>${item.variant.productName || 'Sản phẩm'}</strong></div>
+                    <div style="color: #666; font-size: 14px;">${item.variant.name}</div>
+                  </td>
+                  <td>${formatCurrency(item.unitPrice)}</td>
+                  <td>${item.quantity}</td>
+                  <td><strong>${formatCurrency(item.totalPrice)}</strong></td>
+                </tr>
+              `).join('')}
+              <tr class="total-row">
+                <td colspan="3" style="text-align: right;">TỔNG CỘNG:</td>
+                <td><strong>${formatCurrency(order.totalPrice)}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="grid">
+            <div>
+              <h3>Thông tin khách hàng</h3>
+              <div class="info-item">
+                <span class="info-label">Tên khách hàng:</span> ${order.userName}
+              </div>
+              <div class="info-item">
+                <span class="info-label">Email:</span> ${order.userName}
+              </div>
+              <div class="info-item">
+                <span class="info-label">Số điện thoại:</span> ${order.shippingAddress?.phone || 'Không có'}
+              </div>
+            </div>
+            <div>
+              <h3>Thông tin giao hàng</h3>
+              <div class="info-item">
+                <span class="info-label">Địa chỉ giao hàng:</span><br>
+                ${order.shippingAddress
+                  ? `${order.shippingAddress.address}<br>${order.shippingAddress.ward}, ${order.shippingAddress.district}<br>${order.shippingAddress.province}`
+                  : 'Không có'}
+              </div>
+              <div class="info-item">
+                <span class="info-label">Số điện thoại:</span> ${order.shippingAddress?.phone || 'Không có'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Thông tin thanh toán</h3>
+          <div class="grid">
+            <div>
+              <div class="info-item">
+                <span class="info-label">Phương thức thanh toán:</span><br>
+                ${order.payment?.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' :
+                  order.payment?.paymentMethod === 'VNPAY' ? 'VNPAY' :
+                  order.payment?.paymentMethod === 'CREDIT_CARD' ? 'Thẻ tín dụng' :
+                  order.payment?.paymentMethod || 'Không xác định'}
+              </div>
+            </div>
+            <div>
+              <div class="info-item">
+                <span class="info-label">Trạng thái thanh toán:</span><br>
+                <span style="color: ${
+                  order.payment?.status === 'PENDING' ? '#856404' :
+                  order.payment?.status === 'COMPLETED' ? '#155724' :
+                  order.payment?.status === 'FAILED' ? '#721c24' : '#333'
+                }; font-weight: bold;">
+                  ${order.payment?.status === 'PENDING' ? 'Chờ thanh toán' :
+                    order.payment?.status === 'COMPLETED' ? 'Đã thanh toán' :
+                    order.payment?.status === 'FAILED' ? 'Thanh toán thất bại' :
+                    order.payment?.status || 'Không xác định'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section" style="margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px;">
+          <p style="text-align: center; color: #666; font-size: 12px;">
+            Cảm ơn quý khách đã mua hàng!
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Mở cửa sổ mới và in
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Đợi load xong rồi mới in
+    printWindow.onload = function() {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    };
   };
 
   if (loading) {
@@ -127,13 +349,17 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
       <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">Chi tiết đơn hàng #{order.id}</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <FaTimes className="h-5 w-5" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button onClick={handlePrint} className="text-gray-500 hover:text-gray-700" title="In đơn hàng">
+              <FaPrint className="h-5 w-5" />
+            </button>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700" title="Đóng">
+              <FaTimes className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Order Summary */}
           <div className="md:col-span-2">
             <div className="mb-4 flex justify-between items-center">
               <h3 className="font-semibold text-gray-800">Thông tin đơn hàng</h3>
@@ -244,7 +470,6 @@ function OrderDetailDialog({ orderId, token, onClose, onStatusUpdate }) {
             </div>
           </div>
 
-          {/* Customer and Shipping Info */}
           <div className="space-y-4">
             <div className="border border-gray-200 rounded-lg p-4">
               <h3 className="font-semibold text-gray-800 mb-2">Thông tin khách hàng</h3>

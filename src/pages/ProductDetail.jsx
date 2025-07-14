@@ -398,6 +398,12 @@ const ProductDetail = () => {
                 <button
                   disabled={!selectedColor || !selectedSize}
                   onClick={() => {
+                    if (!currentUser) {
+                      toast.error('Vui lòng đăng nhập để mua sản phẩm');
+                      navigate('/login', { state: { from: `/product/${id}` } });
+                      return;
+                    }
+                    
                     if (selectedColor && selectedSize) {
                       const selectedVariant = product.variants.find(
                         v => v.name.includes(selectedColor) && v.name.includes(selectedSize)

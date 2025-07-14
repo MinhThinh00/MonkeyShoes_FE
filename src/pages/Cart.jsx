@@ -154,7 +154,7 @@ const Cart = () => {
   const removeItem = async (itemId) => {
     setUpdating(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URI}/cart/${currentUser.userId}/remove`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URI}/cart/${currentUser.userId}/remove/${itemId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

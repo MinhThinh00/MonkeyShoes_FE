@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Footer from '../components/Footer/Footer';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+// Xóa import useForm từ react-hook-form
 import { toast } from 'react-hot-toast';
 import { useSelector } from 'react-redux';
 import { FaArrowLeft, FaMapMarkerAlt, FaUser, FaPhone, FaEnvelope, FaCheck, FaPlus, FaEdit } from 'react-icons/fa';
 import axios from 'axios';
 
-const useFetchAddresses = (api, currentUser, setAddresses, setSelectedAddressId, setValue, provinces, setShowAddressForm) => {
+// Sửa lại custom hook để không sử dụng setValue từ react-hook-form
+const useFetchAddresses = (api, currentUser, setAddresses, setSelectedAddressId, setFormData, provinces, setShowAddressForm) => {
   const fetchUserAddresses = useCallback(async () => {
     try {
       if (!currentUser?.userId) return;
@@ -19,11 +20,14 @@ const useFetchAddresses = (api, currentUser, setAddresses, setSelectedAddressId,
       const defaultAddress = sorted.find((addr) => addr.isDefault);
       if (defaultAddress) {
         setSelectedAddressId(defaultAddress.id);
-        setValue('phone', defaultAddress.phone || '');
-        setValue('province', provinces.find((p) => p.name === defaultAddress.province)?.code || '');
-        setValue('district', defaultAddress.district ? provinces.find((p) => p.name === defaultAddress.province)?.districts?.find((d) => d.name === defaultAddress.district)?.code || '' : '');
-        setValue('ward', defaultAddress.ward ? provinces.find((p) => p.name === defaultAddress.province)?.districts?.find((d) => d.name === defaultAddress.district)?.wards?.find((w) => w.name === defaultAddress.ward)?.code || '' : '');
-        setValue('address', defaultAddress.address || '');
+        setFormData(prevData => ({
+          ...prevData,
+          phone: defaultAddress.phone || '',
+          province: provinces.find((p) => p.name === defaultAddress.province)?.code || '',
+          district: defaultAddress.district ? provinces.find((p) => p.name === defaultAddress.province)?.districts?.find((d) => d.name === defaultAddress.district)?.code || '' : '',
+          ward: defaultAddress.ward ? provinces.find((p) => p.name === defaultAddress.province)?.districts?.find((d) => d.name === defaultAddress.district)?.wards?.find((w) => w.name === defaultAddress.ward)?.code || '' : '',
+          address: defaultAddress.address || ''
+        }));
         setShowAddressForm(false);
       } else {
         setShowAddressForm(true);
@@ -31,7 +35,7 @@ const useFetchAddresses = (api, currentUser, setAddresses, setSelectedAddressId,
     } catch (error) {
       toast.error(error.response?.data?.message || 'Không thể tải danh sách địa chỉ');
     }
-  }, [api, currentUser, setAddresses, setSelectedAddressId, setValue, provinces, setShowAddressForm]);
+  }, [api, currentUser, setAddresses, setSelectedAddressId, setFormData, provinces, setShowAddressForm]);
 
   return fetchUserAddresses;
 };
@@ -41,20 +45,23 @@ const Checkout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const currentUser = useSelector((state) => state.user.currentUser);
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
-    defaultValues: {
-      fullName: currentUser?.name || '',
-      email: currentUser?.email || '',
-      phone: '',
-      province: '',
-      district: '',
-      ward: '',
-      address: '',
-      note: '',
-      paymentMethod: 'cod',
-      fromCart: true,
-    },
+  
+  // Thay thế useForm bằng useState
+  const [formData, setFormData] = useState({
+    fullName: currentUser?.name || '',
+    email: currentUser?.email || '',
+    phone: '',
+    province: '',
+    district: '',
+    ward: '',
+    address: '',
+    note: '',
+    paymentMethod: 'cod',
+    fromCart: true,
   });
+  
+  // State để quản lý lỗi form
+  const [formErrors, setFormErrors] = useState({});
 
   const [cartItems, setCartItems] = useState([]);
   const [totalPrice, setTotalPrice] = useState(0);
@@ -79,52 +86,102 @@ const Checkout = () => {
     headers: { 'Content-Type': 'application/json' },
   }), [API_BASE]);
 
-  const fetchUserAddresses = useFetchAddresses(api, currentUser, setAddresses, setSelectedAddressId, setValue, provinces, setShowAddressForm);
+  // Cập nhật hook để sử dụng setFormData thay vì setValue
+  const fetchUserAddresses = useFetchAddresses(api, currentUser, setAddresses, setSelectedAddressId, setFormData, provinces, setShowAddressForm);
 
   useEffect(() => {
     const storedStore = localStorage.getItem('selectedStore');
     if (storedStore) setSelectedStore(parseInt(storedStore));
   }, []);
 
+  // Hàm xử lý thay đổi input
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Xử lý đặc biệt cho trường phone - chỉ cho phép nhập số
+    if (name === 'phone') {
+      // Chỉ giữ lại các ký tự số
+      const numericValue = value.replace(/\D/g, '');
+      
+      setFormData({
+        ...formData,
+        [name]: numericValue
+      });
+      
+      // Validate số điện thoại
+      if (numericValue.length === 0) {
+        setFormErrors({
+          ...formErrors,
+          phone: 'Vui lòng nhập số điện thoại'
+        });
+      } else if (numericValue.length !== 10) {
+        setFormErrors({
+          ...formErrors,
+          phone: 'Số điện thoại phải có đủ 10 chữ số'
+        });
+      } else {
+        // Xóa lỗi nếu hợp lệ
+        const newErrors = {...formErrors};
+        delete newErrors.phone;
+        setFormErrors(newErrors);
+      }
+    } else {
+      // Xử lý bình thường cho các trường khác
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
+  };
+
   const handleSelectAddress = useCallback((addressId) => {
     setSelectedAddressId(addressId);
     const selectedAddress = addresses.find((addr) => addr.id === addressId);
     if (selectedAddress) {
-      setValue('phone', selectedAddress.phone || '');
-      setValue('province', provinces.find((p) => p.name === selectedAddress.province)?.code || '');
-      setValue('district', districts.find((d) => d.name === selectedAddress.district)?.code || '');
-      setValue('ward', wards.find((w) => w.name === selectedAddress.ward)?.code || '');
-      setValue('address', selectedAddress.address || '');
+      setFormData(prevData => ({
+        ...prevData,
+        phone: selectedAddress.phone || '',
+        province: provinces.find((p) => p.name === selectedAddress.province)?.code || '',
+        district: districts.find((d) => d.name === selectedAddress.district)?.code || '',
+        ward: wards.find((w) => w.name === selectedAddress.ward)?.code || '',
+        address: selectedAddress.address || ''
+      }));
       setShowAddressForm(false);
       setShowAddressDialog(false);
     }
-  }, [addresses, provinces, districts, wards, setValue]);
+  }, [addresses, provinces, districts, wards]);
 
   const handleNewAddress = useCallback(() => {
     setSelectedAddressId(null);
     setShowAddressForm(true);
-    setValue('fullName', currentUser?.fullName || '');
-    setValue('phone', '');
-    setValue('province', '');
-    setValue('district', '');
-    setValue('ward', '');
-    setValue('address', '');
+    setFormData(prevData => ({
+      ...prevData,
+      fullName: currentUser?.fullName || '',
+      phone: '',
+      province: '',
+      district: '',
+      ward: '',
+      address: ''
+    }));
     setShowAddressDialog(false);
-  }, [setValue, currentUser]);
+  }, [currentUser]);
 
   useEffect(() => {
     if (location.state?.cartItems) {
       setCartItems(location.state.cartItems);
       setTotalPrice(location.state.totalPrice);
       setItemCount(location.state.itemCount);
-      setValue('fromCart', location.state.fromCart !== undefined ? location.state.fromCart : true);
+      setFormData(prevData => ({
+        ...prevData,
+        fromCart: location.state.fromCart !== undefined ? location.state.fromCart : true
+      }));
       setLoading(false);
       if (currentUser?.userId) fetchUserAddresses();
     } else {
       toast.error('Không có thông tin giỏ hàng. Vui lòng thử lại.');
       navigate('/cart');
     }
-  }, [location, navigate, currentUser, setValue, fetchUserAddresses]);
+  }, [location, navigate, currentUser, fetchUserAddresses]);
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -141,40 +198,46 @@ const Checkout = () => {
 
   useEffect(() => {
     const fetchDistricts = async () => {
-      if (!watch('province')) {
+      if (!formData.province) {
         setDistricts([]);
         return;
       }
       try {
-        const response = await fetch(`https://provinces.open-api.vn/api/p/${watch('province')}?depth=2`);
+        const response = await fetch(`https://provinces.open-api.vn/api/p/${formData.province}?depth=2`);
         const data = await response.json();
         setDistricts(data.districts || []);
-        setValue('district', '');
-        setValue('ward', '');
+        setFormData(prevData => ({
+          ...prevData,
+          district: '',
+          ward: ''
+        }));
       } catch (error) {
         toast.error('Không thể tải danh sách quận/huyện');
       }
     };
     fetchDistricts();
-  }, [watch('province'), setValue]);
+  }, [formData.province]);
 
   useEffect(() => {
     const fetchWards = async () => {
-      if (!watch('district')) {
+      if (!formData.district) {
         setWards([]);
         return;
       }
       try {
-        const response = await fetch(`https://provinces.open-api.vn/api/d/${watch('district')}?depth=2`);
+        const response = await fetch(`https://provinces.open-api.vn/api/d/${formData.district}?depth=2`);
         const data = await response.json();
         setWards(data.wards || []);
-        setValue('ward', '');
+        setFormData(prevData => ({
+          ...prevData,
+          ward: ''
+        }));
       } catch (error) {
         toast.error('Không thể tải danh sách phường/xã');
       }
     };
     fetchWards();
-  }, [watch('district'), setValue]);
+  }, [formData.district]);
 
   const checkDiscountCode = useCallback(async () => {
     if (!discountCode.trim()) {
@@ -213,7 +276,35 @@ const Checkout = () => {
     }
   }, [discount, totalPrice]);
 
-  const onSubmit = async (formData) => {
+  // Hàm validate form
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.fullName) errors.fullName = 'Vui lòng nhập họ và tên';
+    else if (formData.fullName.length < 2) errors.fullName = 'Họ và tên phải có ít nhất 2 ký tự';
+    
+    if (!formData.email) errors.email = 'Vui lòng nhập email';
+    else if (!/^\S+@\S+\.\S+$/.test(formData.email)) errors.email = 'Email không hợp lệ';
+    
+    if (showAddressForm || addresses.length === 0) {
+      if (!formData.province) errors.province = 'Vui lòng chọn tỉnh/thành phố';
+      if (!formData.district) errors.district = 'Vui lòng chọn quận/huyện';
+      if (!formData.ward) errors.ward = 'Vui lòng chọn phường/xã';
+      if (!formData.phone) errors.phone = 'Vui lòng nhập số điện thoại';
+      else if (formData.phone.length !== 10) errors.phone = 'Số điện thoại phải có đủ 10 chữ số';
+      if (!formData.address) errors.address = 'Vui lòng nhập địa chỉ cụ thể';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Hàm xử lý submit form
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
     try {
       const selectedProvince = provinces.find((p) => p.code === parseInt(formData.province))?.name || '';
       const selectedDistrict = districts.find((d) => d.code === parseInt(formData.district))?.name || '';
@@ -224,7 +315,7 @@ const Checkout = () => {
         price: item.price || item.unitPrice,
         quantity: item.quantity || 1,
         productId: item.productId,
-        variantId: item.id,
+        variantId: item.variantId?? item.id,
       }));
 
       let addressDTO;
@@ -289,12 +380,14 @@ const Checkout = () => {
         toast.error(orderResult.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
         return;
       }
-
-      const orderId = orderResult.data?.orderId || orderResult.data?.id;
-      const vnp_TxnRef = orderResult.data?.vnpTxnRef;
+      console.log(orderResult)
+      const firstData = orderResult.data?.[0];
+      const orderId = firstData.orderId || orderResult.data?.id;
+      const vnp_TxnRef = firstData.vnpTxnRef;
 
       if (formData.paymentMethod === 'vnpay') {
         try {
+          //const orderId = orders[0].orderId;
           const params = new URLSearchParams();
           params.append('amount', Math.round(discount && (discount.active || discount.isActive) ? finalPrice : totalPrice));
           params.append('orderInfo', `Thanh toán đơn hàng #${orderId}`);
@@ -370,7 +463,7 @@ const Checkout = () => {
                     <div className="border rounded-lg p-4 bg-blue-50 transition-all duration-300">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-medium text-gray-800">{watch('fullName')}</p>
+                          <p className="font-medium text-gray-800">{formData.fullName}</p>
                           <p className="text-sm text-gray-600">{selectedAddress.phone}</p>
                           <p className="text-sm text-gray-600">{selectedAddress.address}, {selectedAddress.ward}, {selectedAddress.district}, {selectedAddress.province}</p>
                           {selectedAddress.isDefault && (
@@ -406,7 +499,7 @@ const Checkout = () => {
                           >
                             <div className="flex justify-between items-start">
                               <div>
-                                <p className="font-medium text-gray-800">{watch('fullName')}</p>
+                                <p className="font-medium text-gray-800">{formData.fullName}</p>
                                 <p className="text-sm text-gray-600">{address.phone}</p>
                                 <p className="text-sm text-gray-600">{address.address}, {address.ward}, {address.district}, {address.province}</p>
                                 {address.isDefault && (
@@ -441,7 +534,7 @@ const Checkout = () => {
                     </div>
                   </div>
                 )}
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <h3 className="text-lg font-medium text-gray-700 mb-3">Thông tin cá nhân</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="relative group">
@@ -449,7 +542,9 @@ const Checkout = () => {
                         <FaUser className="mr-2 text-gray-500" /> Họ và tên
                       </label>
                       <input
-                        {...register('fullName', { required: 'Vui lòng nhập họ và tên', minLength: { value: 2, message: 'Họ và tên phải có ít nhất 2 ký tự' } })}
+                        name="fullName"
+                        value={formData.fullName}
+                        onChange={handleInputChange}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                         placeholder="Nhập họ và tên"
                         disabled={!showAddressForm}
@@ -457,14 +552,16 @@ const Checkout = () => {
                       <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 left-1/2 transform -translate-x-1/2">
                         {showAddressForm ? 'Nhập họ và tên cho địa chỉ mới' : 'Họ và tên từ thông tin tài khoản'}
                       </div>
-                      {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName.message}</p>}
+                      {formErrors.fullName && <p className="text-red-500 text-xs mt-1">{formErrors.fullName}</p>}
                     </div>
                     <div className="relative group">
                       <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                         <FaEnvelope className="mr-2 text-gray-500" /> Email
                       </label>
                       <input
-                        {...register('email', { required: 'Vui lòng nhập email', pattern: { value: /^\S+@\S+\.\S+$/, message: 'Email không hợp lệ' } })}
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
                         type="email"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                         placeholder="Nhập email"
@@ -473,7 +570,7 @@ const Checkout = () => {
                       <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 left-1/2 transform -translate-x-1/2">
                         Email từ thông tin tài khoản
                       </div>
-                      {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+                      {formErrors.email && <p className="text-red-500 text-xs mt-1">{formErrors.email}</p>}
                     </div>
                   </div>
                   {(showAddressForm || addresses.length === 0) && (
@@ -484,7 +581,9 @@ const Checkout = () => {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="relative group">
                           <select
-                            {...register('province', { required: 'Vui lòng chọn tỉnh/thành phố' })}
+                            name="province"
+                            value={formData.province}
+                            onChange={handleInputChange}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                           >
                             <option value="">Chọn Tỉnh/Thành phố</option>
@@ -497,12 +596,14 @@ const Checkout = () => {
                           <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 left-1/2 transform -translate-x-1/2">
                             Chọn tỉnh/thành phố của bạn
                           </div>
-                          {errors.province && <p className="text-red-500 text-xs mt-1">{errors.province.message}</p>}
+                          {formErrors.province && <p className="text-red-500 text-xs mt-1">{formErrors.province}</p>}
                         </div>
                         <div className="relative group">
                           <select
-                            {...register('district', { required: 'Vui lòng chọn quận/huyện' })}
-                            disabled={!watch('province')}
+                            name="district"
+                            value={formData.district}
+                            onChange={handleInputChange}
+                            disabled={!formData.province}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 transition-all duration-200"
                           >
                             <option value="">Chọn Quận/Huyện</option>
@@ -515,12 +616,14 @@ const Checkout = () => {
                           <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 left-1/2 transform -translate-x-1/2">
                             Chọn quận/huyện của bạn
                           </div>
-                          {errors.district && <p className="text-red-500 text-xs mt-1">{errors.district.message}</p>}
+                          {formErrors.district && <p className="text-red-500 text-xs mt-1">{formErrors.district}</p>}
                         </div>
                         <div className="relative group">
                           <select
-                            {...register('ward', { required: 'Vui lòng chọn phường/xã' })}
-                            disabled={!watch('district')}
+                            name="ward"
+                            value={formData.ward}
+                            onChange={handleInputChange}
+                            disabled={!formData.district}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 transition-all duration-200"
                           >
                             <option value="">Chọn Phường/Xã</option>
@@ -533,38 +636,43 @@ const Checkout = () => {
                           <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 left-1/2 transform -translate-x-1/2">
                             Chọn phường/xã của bạn
                           </div>
-                          {errors.ward && <p className="text-red-500 text-xs mt-1">{errors.ward.message}</p>}
+                          {formErrors.ward && <p className="text-red-500 text-xs mt-1">{formErrors.ward}</p>}
                         </div>
                       </div>
                       <div className="relative group mt-4">
                         <input
-                          {...register('phone', { required: 'Vui lòng nhập số điện thoại', pattern: { value: /^[0-9]{10}$/, message: 'Số điện thoại phải có 10 chữ số' } })}
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
                           type="tel"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                          placeholder="Nhập số điện thoại"
+                          placeholder="Nhập số điện thoại (10 chữ số)"
                         />
-                        <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 left-1/2 transform -translate-x-1/2">
-                          Nhập số điện thoại 10 chữ số
-                        </div>
-                        {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+                        {formErrors.phone && <p className="text-red-500 text-xs mt-1">{formErrors.phone}</p>}
                       </div>
                       <div className="relative group mt-4">
                         <input
-                          {...register('address', { required: 'Vui lòng nhập địa chỉ cụ thể' })}
+                          name="address"
+                          value={formData.address}
+                          onChange={handleInputChange}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                           placeholder="Số nhà, tên đường"
                         />
                         <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 left-1/2 transform -translate-x-1/2">
                           Nhập số nhà và tên đường
                         </div>
-                        {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>}
+                        {formErrors.address && <p className="text-red-500 text-xs mt-1">{formErrors.address}</p>}
                       </div>
                     </div>
                   )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Ghi chú</label>
                     <textarea
-                      {...register('note')}
+                      name="note"
+                      value={formData.note}
+                      onChange={handleInputChange}
                       rows="4"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                       placeholder="Ghi chú về đơn hàng, ví dụ: thời gian hay chi tiết địa điểm giao hàng."
@@ -575,15 +683,17 @@ const Checkout = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div
                         className={`border rounded-md p-4 cursor-pointer transition-all duration-300 ${
-                          watch('paymentMethod') === 'cod' ? 'border-blue-600 bg-blue-50 shadow-md' : 'border-gray-200 hover:bg-gray-50 hover:shadow-md'
+                          formData.paymentMethod === 'cod' ? 'border-blue-600 bg-blue-50 shadow-md' : 'border-gray-200 hover:bg-gray-50 hover:shadow-md'
                         }`}
-                        onClick={() => setValue('paymentMethod', 'cod')}
+                        onClick={() => setFormData({...formData, paymentMethod: 'cod'})}
                       >
                         <div className="flex items-center">
                           <input
                             type="radio"
-                            {...register('paymentMethod')}
+                            name="paymentMethod"
                             value="cod"
+                            checked={formData.paymentMethod === 'cod'}
+                            onChange={handleInputChange}
                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                           />
                           <div className="ml-3">
@@ -594,15 +704,17 @@ const Checkout = () => {
                       </div>
                       <div
                         className={`border rounded-md p-4 cursor-pointer transition-all duration-300 ${
-                          watch('paymentMethod') === 'vnpay' ? 'border-blue-600 bg-blue-50 shadow-md' : 'border-gray-200 hover:bg-gray-50 hover:shadow-md'
+                          formData.paymentMethod === 'vnpay' ? 'border-blue-600 bg-blue-50 shadow-md' : 'border-gray-200 hover:bg-gray-50 hover:shadow-md'
                         }`}
-                        onClick={() => setValue('paymentMethod', 'vnpay')}
+                        onClick={() => setFormData({...formData, paymentMethod: 'vnpay'})}
                       >
                         <div className="flex items-center">
                           <input
                             type="radio"
-                            {...register('paymentMethod')}
+                            name="paymentMethod"
                             value="vnpay"
+                            checked={formData.paymentMethod === 'vnpay'}
+                            onChange={handleInputChange}
                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                           />
                           <div className="ml-3">
@@ -616,9 +728,9 @@ const Checkout = () => {
                   <button
                     type="submit"
                     className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
-                    disabled={Object.keys(errors).length > 0}
+                    disabled={Object.keys(formErrors).length > 0}
                   >
-                    {watch('paymentMethod') === 'vnpay' ? 'Thanh toán với VNPay' : 'Đặt hàng ngay'}
+                    {formData.paymentMethod === 'vnpay' ? 'Thanh toán với VNPay' : 'Đặt hàng ngay'}
                   </button>
                 </form>
               </div>
@@ -648,7 +760,7 @@ const Checkout = () => {
                   ))}
                 </div>
                 <div className="space-y-4 border-t border-gray-200 pt-4">
-                  <div className class="relative group">
+                  <div className="relative group">
                     <div className="flex items-center space-x-2">
                       <input
                         type="text"
@@ -682,7 +794,7 @@ const Checkout = () => {
                     </span>
                   </div>
                   {discount && (discount.active || discount.isActive) && (
-                    <div class="flex justify-between text-green-600">
+                    <div className="flex justify-between text-green-600">
                       <span>Giảm giá ({discount.discountPercentage}%)</span>
                       <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discountAmount)}</span>
                     </div>

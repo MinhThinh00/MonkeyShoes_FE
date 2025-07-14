@@ -30,15 +30,22 @@ const Header = ({ onSearch }) => {
         }
       });
       const data = await response.json();
+      console.log('Response data:', data);
       
-      // Sửa thành:
-      if (data && data.data) {
-        setUserLogin(data.data); // Giả sử API trả về data.data chứa thông tin user
-        console.log('User data:', data.data);
+      // Kiểm tra cấu trúc dữ liệu
+      const userData = data.data || data;
+      
+      if (userData) {
+        // Xử lý URL ảnh nếu có
+        if (userData.img) {
+          userData.img = userData.img.replace(/[` ]/g, '').trim();
+        }
+        
+        setUserLogin(userData);
+        console.log('Processed user data:', userData);
       }
-      
     } catch (error) {
-      throw error;
+      console.error('Error fetching user data:', error);
     }
   };
   // Lấy tham số tìm kiếm từ URL khi component được tải

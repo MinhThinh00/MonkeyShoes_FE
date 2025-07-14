@@ -145,18 +145,31 @@ const EditProduct =  () => {
   };
   
   // Handle price input with formatting
+  // const handlePriceChange = (e) => {
+  //   const value = e.target.value.replace(/,/g, "");
+  //   if (!isNaN(value)) {
+  //     setProductData({
+  //       ...productData,
+  //       basePrice: Number(value),
+  //     });
+  //   }
+  // };
+  
+  // // Format price display
+  // const formatPrice = (price) => {
+  //   return new Intl.NumberFormat("vi-VN").format(price);
+  // };
   const handlePriceChange = (e) => {
-    const value = e.target.value.replace(/,/g, "");
-    if (!isNaN(value)) {
-      setProductData({
-        ...productData,
-        basePrice: Number(value),
-      });
-    }
+    // Loại bỏ tất cả ký tự không phải số
+    const rawValue = e.target.value.replace(/[^\d]/g, "");
+    setProductData({
+      ...productData,
+      basePrice: Number(rawValue),
+    });
   };
   
-  // Format price display
   const formatPrice = (price) => {
+    if (!price) return "";
     return new Intl.NumberFormat("vi-VN").format(price);
   };
   
